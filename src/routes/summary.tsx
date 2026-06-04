@@ -2,9 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { GlassCard, Pill, SectionTitle, CountUp } from "@/components/ui-bits";
 
-export const Route = createFileRoute("/profiler")({
-  head: () => ({ meta: [{ title: "Profiler · SchemaSense" }] }),
-  component: Profiler,
+export const Route = createFileRoute("/summary")({
+  head: () => ({ meta: [{ title: "Summary · SchemaSense" }] }),
+  component: Summary,
 });
 
 const columns = [
@@ -37,11 +37,11 @@ const typeBreakdown = [
   { t: "enum", pct: 5 },
 ];
 
-function Profiler() {
+function Summary() {
   return (
     <div>
       <SectionTitle
-        kicker="Step 04 / Profiler"
+        kicker="Step 04 / Summary"
         title={<>Statistics, <span className="text-primary">visualized.</span></>}
         sub="Distributions, nulls, uniques and ranges for every column — animated from zero on every render."
       />

@@ -10,7 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UploadRouteImport } from './routes/upload'
-import { Route as ProfilerRouteImport } from './routes/profiler'
+import { Route as TalktoSpeechRouteImport } from './routes/talkto-speech'
+import { Route as SummaryRouteImport } from './routes/summary'
+import { Route as MultilingualRouteImport } from './routes/multilingual'
 import { Route as LineageRouteImport } from './routes/lineage'
 import { Route as ExportRouteImport } from './routes/export'
 import { Route as DictionaryRouteImport } from './routes/dictionary'
@@ -23,9 +25,19 @@ const UploadRoute = UploadRouteImport.update({
   path: '/upload',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProfilerRoute = ProfilerRouteImport.update({
-  id: '/profiler',
-  path: '/profiler',
+const TalktoSpeechRoute = TalktoSpeechRouteImport.update({
+  id: '/talkto-speech',
+  path: '/talkto-speech',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SummaryRoute = SummaryRouteImport.update({
+  id: '/summary',
+  path: '/summary',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MultilingualRoute = MultilingualRouteImport.update({
+  id: '/multilingual',
+  path: '/multilingual',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LineageRoute = LineageRouteImport.update({
@@ -66,7 +78,9 @@ export interface FileRoutesByFullPath {
   '/dictionary': typeof DictionaryRoute
   '/export': typeof ExportRoute
   '/lineage': typeof LineageRoute
-  '/profiler': typeof ProfilerRoute
+  '/multilingual': typeof MultilingualRoute
+  '/summary': typeof SummaryRoute
+  '/talkto-speech': typeof TalktoSpeechRoute
   '/upload': typeof UploadRoute
 }
 export interface FileRoutesByTo {
@@ -76,7 +90,9 @@ export interface FileRoutesByTo {
   '/dictionary': typeof DictionaryRoute
   '/export': typeof ExportRoute
   '/lineage': typeof LineageRoute
-  '/profiler': typeof ProfilerRoute
+  '/multilingual': typeof MultilingualRoute
+  '/summary': typeof SummaryRoute
+  '/talkto-speech': typeof TalktoSpeechRoute
   '/upload': typeof UploadRoute
 }
 export interface FileRoutesById {
@@ -87,7 +103,9 @@ export interface FileRoutesById {
   '/dictionary': typeof DictionaryRoute
   '/export': typeof ExportRoute
   '/lineage': typeof LineageRoute
-  '/profiler': typeof ProfilerRoute
+  '/multilingual': typeof MultilingualRoute
+  '/summary': typeof SummaryRoute
+  '/talkto-speech': typeof TalktoSpeechRoute
   '/upload': typeof UploadRoute
 }
 export interface FileRouteTypes {
@@ -99,7 +117,9 @@ export interface FileRouteTypes {
     | '/dictionary'
     | '/export'
     | '/lineage'
-    | '/profiler'
+    | '/multilingual'
+    | '/summary'
+    | '/talkto-speech'
     | '/upload'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -109,7 +129,9 @@ export interface FileRouteTypes {
     | '/dictionary'
     | '/export'
     | '/lineage'
-    | '/profiler'
+    | '/multilingual'
+    | '/summary'
+    | '/talkto-speech'
     | '/upload'
   id:
     | '__root__'
@@ -119,7 +141,9 @@ export interface FileRouteTypes {
     | '/dictionary'
     | '/export'
     | '/lineage'
-    | '/profiler'
+    | '/multilingual'
+    | '/summary'
+    | '/talkto-speech'
     | '/upload'
   fileRoutesById: FileRoutesById
 }
@@ -130,7 +154,9 @@ export interface RootRouteChildren {
   DictionaryRoute: typeof DictionaryRoute
   ExportRoute: typeof ExportRoute
   LineageRoute: typeof LineageRoute
-  ProfilerRoute: typeof ProfilerRoute
+  MultilingualRoute: typeof MultilingualRoute
+  SummaryRoute: typeof SummaryRoute
+  TalktoSpeechRoute: typeof TalktoSpeechRoute
   UploadRoute: typeof UploadRoute
 }
 
@@ -143,11 +169,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UploadRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/profiler': {
-      id: '/profiler'
-      path: '/profiler'
-      fullPath: '/profiler'
-      preLoaderRoute: typeof ProfilerRouteImport
+    '/talkto-speech': {
+      id: '/talkto-speech'
+      path: '/talkto-speech'
+      fullPath: '/talkto-speech'
+      preLoaderRoute: typeof TalktoSpeechRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/summary': {
+      id: '/summary'
+      path: '/summary'
+      fullPath: '/summary'
+      preLoaderRoute: typeof SummaryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/multilingual': {
+      id: '/multilingual'
+      path: '/multilingual'
+      fullPath: '/multilingual'
+      preLoaderRoute: typeof MultilingualRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lineage': {
@@ -202,7 +242,9 @@ const rootRouteChildren: RootRouteChildren = {
   DictionaryRoute: DictionaryRoute,
   ExportRoute: ExportRoute,
   LineageRoute: LineageRoute,
-  ProfilerRoute: ProfilerRoute,
+  MultilingualRoute: MultilingualRoute,
+  SummaryRoute: SummaryRoute,
+  TalktoSpeechRoute: TalktoSpeechRoute,
   UploadRoute: UploadRoute,
 }
 export const routeTree = rootRouteImport

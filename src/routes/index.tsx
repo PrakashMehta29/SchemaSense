@@ -30,10 +30,13 @@ function Index() {
   return (
     <div className="space-y-10">
       {/* Hero */}
-      <div className="relative z-10 max-w-[1600px] mx-auto p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 relative">
-          <div className="mb-6 flex items-center gap-2 font-mono-tight text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
-            <span className="h-1.5 w-1.5 rounded-full bg-primary glow-lime" />
+      <div className="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 relative overflow-hidden rounded-3xl border glass-panel p-8 md:p-12 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.05)]">
+          {/* Decorative top highlight */}
+          <div className="absolute top-0 left-0 w-full h-[1px] glass-edge" />
+
+          <div className="mb-6 flex items-center gap-2 font-mono-tight text-[11px] uppercase tracking-[0.25em] text-primary">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary glow-lime shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
             Schema Intelligence · Live
           </div>
           <div className="mb-8">
@@ -42,7 +45,7 @@ function Index() {
               <br />
               <span className="text-primary text-glow">Schema.</span>
             </h1>
-            <p className="mt-6 max-w-lg text-sm text-muted-foreground md:text-base">
+            <p className="mt-6 max-w-lg text-sm text-muted-foreground md:text-base leading-relaxed">
               SchemaSense scans, profiles and documents your data warehouse in seconds.
               See every column, every flow, every anomaly — instantly.
             </p>
@@ -59,7 +62,7 @@ function Index() {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.08, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                className="bg-black/30 backdrop-blur-lg border border-white/[0.08] rounded-xl p-6 transition-all duration-300 hover:border-white/[0.15]"
+                className="glass-panel-heavy backdrop-blur-lg border rounded-xl p-6 transition-all duration-300"
               >
                 <div className={`font-display text-3xl font-bold md:text-4xl ${i === 0 ? "text-primary text-glow" : ""}`}>
                   <CountUp to={s.value} suffix={s.suffix ?? ""} />
@@ -76,7 +79,7 @@ function Index() {
               Upload a schema
               <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </a>
-            <a href="/dictionary" className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-6 py-3 text-sm font-medium text-foreground hover:bg-white/10 transition-colors">
+            <a href="/dictionary" className="inline-flex items-center gap-2 rounded-full border border-border bg-black/5 dark:bg-white/5 px-6 py-3 text-sm font-medium text-foreground hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
               Browse dictionary
             </a>
           </div>
@@ -117,7 +120,7 @@ function Index() {
       </div>
 
       {/* Ticker */}
-      <div className="relative overflow-hidden rounded-full border border-white/5 bg-[#0a0a0a]/40 backdrop-blur-md py-3 px-2">
+      <div className="relative overflow-hidden rounded-full border glass-panel-heavy backdrop-blur-md py-3 px-2">
         <div className="absolute left-0 top-0 z-10 h-full w-16 bg-gradient-to-r from-background to-transparent" />
         <div className="absolute right-0 top-0 z-10 h-full w-16 bg-gradient-to-l from-background to-transparent" />
         <div className="flex animate-ticker whitespace-nowrap font-mono-tight text-xs text-muted-foreground">
@@ -151,7 +154,7 @@ function Index() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.05 }}
-              className="group relative overflow-hidden rounded-xl border border-white/5 bg-[#0a0a0a]/40 backdrop-blur-md p-5 transition-colors hover:border-primary/40"
+              className="group relative overflow-hidden rounded-xl border glass-panel-heavy backdrop-blur-md p-5 transition-colors"
             >
               <div className="font-display text-xl font-semibold">{m.t}</div>
               <div className="mt-1 text-sm text-muted-foreground">{m.d}</div>
@@ -177,7 +180,7 @@ function StatusCard({
       transition={{ delay, type: "spring", stiffness: 200, damping: 22 }}
       className="relative"
     >
-      <div className="overflow-hidden bg-black/30 backdrop-blur-lg border border-white/[0.08] rounded-xl p-6 transition-all duration-300 hover:border-white/[0.15]">
+      <div className="overflow-hidden glass-panel-heavy backdrop-blur-lg border rounded-xl p-6 transition-all duration-300">
         <div className="flex items-center justify-between">
           <div className={`flex items-center gap-2 font-mono-tight text-[10px] uppercase tracking-[0.2em] ${tone === "lime" ? "text-primary" : "text-destructive"}`}>
             {dotPulse && <span className={`h-2 w-2 animate-pulse-dot rounded-full ${tone === "lime" ? "bg-primary glow-lime" : "bg-destructive"}`} />}

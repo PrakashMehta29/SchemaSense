@@ -1,58 +1,95 @@
+import React, { useState, useEffect } from "react";
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import DataCloud from "./DataCloud";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Upload, BookOpen, MessageSquare, BarChart3, AlertTriangle,
-  GitBranch, Download, LayoutDashboard,
+  GitBranch, Download, LayoutDashboard, Sun, Moon, Mic, Globe
 } from "lucide-react";
 import { BrandLogo } from "./BrandLogo";
 
-const nav = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/upload", label: "Upload", icon: Upload },
-  { to: "/dictionary", label: "Dictionary", icon: BookOpen },
-  { to: "/ask", label: "Ask AI", icon: MessageSquare },
-  { to: "/profiler", label: "Profiler", icon: BarChart3 },
-  { to: "/anomalies", label: "Anomalies", icon: AlertTriangle },
-  { to: "/lineage", label: "Lineage", icon: GitBranch },
-  { to: "/export", label: "Export", icon: Download },
-] as const;
+const navGroups = [
+  {
+    title: "OVERVIEW",
+    items: [
+      { to: "/", label: "Dashboard", icon: LayoutDashboard },
+      { to: "/summary", label: "Summary", icon: BarChart3 },
+      { to: "/anomalies", label: "Anomalies", icon: AlertTriangle },
+    ]
+  },
+  {
+    title: "DATA MANAGEMENT",
+    items: [
+      { to: "/upload", label: "Upload", icon: Upload },
+      { to: "/dictionary", label: "Dictionary", icon: BookOpen },
+      { to: "/export", label: "Export", icon: Download },
+    ]
+  },
+  {
+    title: "INTELLIGENCE",
+    items: [
+      { to: "/ask", label: "Ask AI", icon: MessageSquare },
+      { to: "/talkto-speech", label: "Talkto speech", icon: Mic },
+      { to: "/multilingual", label: "Multilingual", icon: Globe },
+    ]
+  }
+];
 
 export function AppShell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  
+  // Theme toggle state
+  const [isDark, setIsDark] = useState(false);
+  useEffect(() => {
+    if (isDark) document.documentElement.classList.add("dark");
+    else document.documentElement.classList.remove("dark");
+  }, [isDark]);
 
   return (
     <div className="flex w-screen h-screen overflow-hidden bg-transparent text-foreground">
       <DataCloud density={70} />
 
       {/* Sidebar */}
-      <aside className="w-64 h-full flex-shrink-0 border-r border-white/[0.05] bg-[#090909]/80 backdrop-blur-md z-20 hidden md:flex flex-col px-4 py-6">
-        <Link to="/" className="mb-8 flex items-center px-2">
-          <BrandLogo />
-          <span className="font-display text-2xl font-bold tracking-tight text-white">SchemaSense</span>
-        </Link>
+      <aside className="w-64 h-full flex-shrink-0 border-r glass-panel backdrop-blur-2xl shadow-[4px_0_24px_rgba(0,0,0,0.05)] z-20 hidden md:flex flex-col px-4 py-6">
+        <div className="flex items-center justify-between mb-8 px-2">
+          <Link to="/" className="flex items-center">
+            <BrandLogo />
+            <span className="font-display text-2xl font-bold tracking-tight text-foreground">SchemaSense</span>
+          </Link>
+        </div>
 
-        <nav className="flex flex-col gap-1">
-          {nav.map(({ to, label, icon: Icon }) => {
-            const active = to === "/" ? pathname === "/" : pathname.startsWith(to);
-            return (
-              <Link
-                key={to}
-                to={to}
-                className={`group relative flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
-                  active
-                    ? "border border-primary/20 bg-primary/10 text-primary shadow-[inset_0_0_20px_rgba(204,255,0,0.05)]"
-                    : "border border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                <span className="font-medium">{label}</span>
-              </Link>
-            );
-          })}
+        <nav className="flex flex-col gap-6 w-full overflow-y-auto pb-4 custom-scrollbar">
+          {navGroups.map((group, idx) => (
+            <div key={idx} className="flex flex-col w-full">
+              <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-3 px-4">
+                {group.title}
+              </h3>
+              <div className="flex flex-col gap-1 w-full">
+                {group.items.map(({ to, label, icon: Icon }) => {
+                  const active = to === "/" ? pathname === "/" : pathname.startsWith(to);
+                  return (
+                    <Link
+                      key={to}
+                      to={to}
+                      className={`group relative flex items-center justify-between rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${
+                        active
+                          ? "border border-primary/20 bg-primary/10 text-primary shadow-[inset_0_0_20px_rgba(16,185,129,0.05)]"
+                          : "border border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className="h-[18px] w-[18px]" />
+                        <span className="font-medium">{label}</span>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
-        <div className="mt-auto rounded-xl border border-white/5 bg-[#0a0a0a]/40 p-4">
+        <div className="mt-auto rounded-xl border glass-panel-heavy p-4">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span className="h-2 w-2 animate-pulse-dot rounded-full bg-primary glow-lime" />
             Engine online
@@ -64,9 +101,32 @@ export function AppShell() {
       </aside>
 
       {/* Main */}
-      <main className="flex-1 h-full overflow-y-auto p-8 relative z-10 bg-transparent">
+      <main className="flex-1 h-full overflow-y-auto relative z-10 bg-transparent flex flex-col">
+        
+        {/* Top Alignment Wrapper for Theme Toggle */}
+        <div className="w-full max-w-[1600px] mx-auto px-8 pt-8 relative z-50">
+          <div className="flex justify-end hidden md:flex items-center">
+            <button 
+              onClick={() => setIsDark(!isDark)} 
+              className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-full glass-panel-heavy hover:bg-black/5 dark:hover:bg-white/10 transition-colors shadow-sm border border-border"
+            >
+              {isDark ? (
+                <>
+                  <Sun className="w-4 h-4 text-primary" />
+                  <span>Light Mode</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="w-4 h-4 text-primary" />
+                  <span>Dark Mode</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
         {/* Mobile top bar */}
-        <div className="flex items-center justify-between border-b border-border/60 bg-background/60 px-4 py-3 backdrop-blur md:hidden mb-8 -mx-8 -mt-8">
+        <div className="flex items-center justify-between border-b border-border/60 bg-background/60 px-4 py-3 backdrop-blur md:hidden mb-8">
           <Link to="/" className="flex items-center font-display text-base font-bold">
             <BrandLogo className="w-6 h-6 mr-2 shrink-0" />
             SchemaSense
@@ -81,7 +141,7 @@ export function AppShell() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ type: "spring", stiffness: 220, damping: 26 }}
-            className="w-full"
+            className="w-full max-w-[1600px] mx-auto px-8 pb-24"
           >
             <Outlet />
           </motion.div>

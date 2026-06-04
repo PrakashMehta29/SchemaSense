@@ -52,8 +52,8 @@ function Lineage() {
           <svg viewBox="0 0 820 440" className="absolute inset-0 h-full w-full">
             <defs>
               <linearGradient id="edge" x1="0" x2="1">
-                <stop offset="0%" stopColor="rgba(204,255,0,0.15)" />
-                <stop offset="100%" stopColor="rgba(204,255,0,0.7)" />
+                <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.15} />
+                <stop offset="100%" stopColor="var(--primary)" stopOpacity={0.7} />
               </linearGradient>
               <filter id="glow">
                 <feGaussianBlur stdDeviation="3" result="b" />
@@ -95,8 +95,9 @@ function Lineage() {
               >
                 <rect
                   x={n.x} y={n.y} width={80} height={36} rx={8}
-                  fill="rgba(11,11,12,0.85)"
-                  stroke={n.layer === "mart" ? "#ccff00" : "rgba(204,255,0,0.4)"}
+                  fill="var(--card)"
+                  stroke={n.layer === "mart" ? "var(--primary)" : "var(--primary)"}
+                  strokeOpacity={n.layer === "mart" ? 1 : 0.4}
                   strokeWidth={n.layer === "mart" ? 1.5 : 1}
                   filter={n.layer === "mart" ? "url(#glow)" : undefined}
                 />

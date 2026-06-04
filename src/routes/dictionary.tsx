@@ -67,7 +67,11 @@ function Dictionary() {
                 <span className="h-1.5 w-1.5 rounded-full bg-primary glow-lime" />
                 {r.col}
               </div>
-              <div className="col-span-2 font-mono-tight text-xs text-muted-foreground">{r.type}</div>
+              <div className="col-span-2">
+                <span className="font-mono-tight text-[11px] rounded bg-[rgba(255,255,255,0.05)] px-2 py-0.5 text-[#E5E7EB]">
+                  {r.type}
+                </span>
+              </div>
               <div className="col-span-1">
                 {r.nullable ? <Pill tone="red">YES</Pill> : <Pill tone="muted">NO</Pill>}
               </div>
