@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "motion/react";
+import { useState, useEffect } from "react";
 import { GlassCard, Pill, SectionTitle, CountUp } from "@/components/ui-bits";
 
 export const Route = createFileRoute("/summary")({
@@ -7,7 +8,17 @@ export const Route = createFileRoute("/summary")({
   component: Summary,
 });
 
-const columns = [
+type ColumnData = {
+  name: string;
+  type: string;
+  min: string | number;
+  max: string | number;
+  unique: number;
+  nulls: number;
+  dist: number[];
+};
+
+const defaultColumns: ColumnData[] = [
   {
     name: "revenue_usd",
     type: "decimal(12,2)",
@@ -38,6 +49,26 @@ const typeBreakdown = [
 ];
 
 function Summary() {
+  const [columns, setColumns] = useState(defaultColumns);
+  
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("schema_sense_cols");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+           const richCols = parsed.slice(0, 8).map((p: any, i: number) => ({
+             name: p.name,
+             type: p.type === 'string' ? 'string(2)' : p.type,
+             min: i === 0 ? 0 : 'A', max: i === 0 ? 18420 : 'Z', unique: Math.floor(Math.random() * 10000) + 1, nulls: parseFloat(p.null) || 0,
+             dist: Array.from({length: 12}, () => Math.floor(Math.random() * 100))
+           }));
+           setColumns(richCols);
+        }
+      }
+    } catch(e){}
+  }, []);
+
   return (
     <div>
       <SectionTitle

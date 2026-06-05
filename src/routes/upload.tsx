@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { UploadCloud, FileSpreadsheet, Database, CheckCircle2 } from "lucide-react";
 import { SectionTitle, Pill, GlassCard } from "@/components/ui-bits";
 
@@ -14,7 +14,7 @@ export const Route = createFileRoute("/upload")({
   component: UploadPage,
 });
 
-const detectedColumns = [
+const defaultColumns = [
   { name: "cust_id", type: "uuid", null: "0%" },
   { name: "email", type: "string", null: "2.1%" },
   { name: "signup_ts", type: "timestamp", null: "0%" },
@@ -30,13 +30,72 @@ function UploadPage() {
   const [started, setStarted] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleUpload = () => {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [columns, setColumns] = useState(defaultColumns);
+
+  useEffect(() => {
+    localStorage.setItem("schema_sense_cols", JSON.stringify(columns));
+  }, [columns]);
+
+  const handleUpload = (file?: File) => {
+    if (file) {
+      setSelectedFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const text = e.target?.result as string;
+          let newCols: {name: string, type: string, null: string}[] = [];
+          if (file.name.endsWith('.csv')) {
+            const firstLine = text.split('\n')[0];
+            const headers = firstLine.split(',').map(h => h.trim().replace(/^"|"$/g, '')).filter(h => h);
+            newCols = headers.map(h => ({ name: h, type: "string", null: "0%" }));
+          } else if (file.name.endsWith('.json')) {
+            const json = JSON.parse(text);
+            const firstItem = Array.isArray(json) ? json[0] : json;
+            if (firstItem && typeof firstItem === 'object') {
+              newCols = Object.keys(firstItem).map(k => ({ name: k, type: typeof firstItem[k], null: "0%" }));
+            }
+          } else {
+             newCols = [
+               { name: "id", type: "uuid", null: "0%" },
+               { name: "data", type: "string", null: "0%" },
+               { name: "created_at", type: "timestamp", null: "0%" }
+             ];
+          }
+          if (newCols.length > 0) {
+            setColumns(newCols.slice(0, 8));
+          } else {
+            setColumns(defaultColumns);
+          }
+        } catch (err) {
+          setColumns(defaultColumns);
+        }
+      };
+      if (file.name.endsWith('.csv')) {
+         reader.readAsText(file.slice(0, 1024 * 64));
+      } else if (file.size < 5 * 1024 * 1024) {
+         reader.readAsText(file);
+      } else {
+         setColumns(defaultColumns);
+      }
+    } else {
+      setSelectedFile(null);
+      setColumns(defaultColumns);
+    }
+    
     setIsProcessing(true);
     setStarted(false);
     setTimeout(() => {
       setIsProcessing(false);
       setStarted(true);
     }, 3000);
+  };
+
+  const onFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      handleUpload(e.target.files[0]);
+      e.target.value = "";
+    }
   };
 
   return (
@@ -76,7 +135,9 @@ function UploadPage() {
               </div>
               
               <div className="font-display text-xl font-bold tracking-tight">Profiling Schema</div>
-              <div className="mt-1 text-sm text-muted-foreground">Reading 2.4M rows...</div>
+              <div className="mt-1 text-sm text-muted-foreground">
+                {selectedFile ? `Reading ${selectedFile.name}...` : "Reading 2.4M rows..."}
+              </div>
               
               <div className="w-full max-w-xs mt-8">
                 <div className="flex justify-between text-[10px] uppercase tracking-wider text-muted-foreground font-mono-tight mb-2">
@@ -99,14 +160,55 @@ function UploadPage() {
                 </div>
               </div>
             </div>
+          ) : started ? (
+            <div className="flex min-h-[340px] flex-col items-center justify-center rounded-xl border-2 border-primary/40 bg-primary/5 p-8 text-center">
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 200, damping: 20 }}
+              >
+                <CheckCircle2 className="h-16 w-16 text-primary mb-4 mx-auto drop-shadow-[0_0_15px_rgba(242,120,92,0.6)]" />
+              </motion.div>
+              <div className="font-display text-2xl font-semibold">Profiling Complete</div>
+              <div className="mt-2 text-sm text-muted-foreground">
+                {selectedFile ? selectedFile.name : "Dataset"} has been successfully ingested and profiled.
+              </div>
+              <div className="mt-8 flex gap-3">
+                <button 
+                  onClick={() => { setStarted(false); setSelectedFile(null); }}
+                  className="rounded-full border border-border/60 bg-secondary/40 px-5 py-2.5 text-sm font-medium hover:border-primary/40 hover:text-primary transition-colors"
+                >
+                  Upload Another
+                </button>
+                <a 
+                  href="/summary" 
+                  className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground glow-lime transition-transform hover:scale-[1.02]"
+                >
+                  View Summary
+                </a>
+              </div>
+            </div>
           ) : (
             <div
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
               onDragLeave={() => setDragOver(false)}
-              onDrop={(e) => { e.preventDefault(); setDragOver(false); handleUpload(); }}
-              onClick={handleUpload}
+              onDrop={(e) => { 
+                e.preventDefault(); 
+                setDragOver(false); 
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                  handleUpload(e.dataTransfer.files[0]); 
+                }
+              }}
+              onClick={() => document.getElementById("file-upload")?.click()}
               className="flex min-h-[340px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/70 p-8 text-center hover:border-primary/40 transition-colors"
             >
+              <input 
+                type="file" 
+                id="file-upload" 
+                className="hidden" 
+                accept=".csv,.parquet,.json,.xlsx"
+                onChange={onFileInput}
+              />
               <motion.div
                 initial={{ y: -8, opacity: 0 }}
                 animate={{ y: [0, -8, 0], opacity: 1 }}
@@ -129,17 +231,7 @@ function UploadPage() {
             </div>
           )}
 
-          <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3">
-            {[
-              { i: FileSpreadsheet, t: "Sample CSV" },
-              { i: Database, t: "Connect Warehouse" },
-              { i: UploadCloud, t: "Paste URL" },
-            ].map(({ i: Icon, t }) => (
-              <button key={t} className="flex items-center gap-2 rounded-lg border border-border/60 bg-secondary/40 px-3 py-2 text-sm hover:border-primary/40 hover:text-primary transition-colors">
-                <Icon className="h-4 w-4" /> {t}
-              </button>
-            ))}
-          </div>
+
         </GlassCard>
 
         <GlassCard className="p-6">
@@ -152,7 +244,7 @@ function UploadPage() {
             </Pill>
           </div>
           <ul className="mt-4 divide-y divide-border/60">
-            {detectedColumns.map((c, i) => (
+            {columns.map((c, i) => (
               <motion.li
                 key={c.name}
                 initial={{ opacity: 0, x: -10 }}

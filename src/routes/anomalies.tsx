@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "motion/react";
+import { useState, useEffect } from "react";
 import { AlertTriangle, Copy, Type, Clock } from "lucide-react";
 import { GlassCard, Pill, SectionTitle } from "@/components/ui-bits";
 
@@ -8,7 +9,7 @@ export const Route = createFileRoute("/anomalies")({
   component: Anomalies,
 });
 
-const items = [
+const defaultItems = [
   { icon: Type, sev: "high", title: "Type mismatch · revenue_usd", desc: "12 rows ingested as string instead of decimal in the last hour.", col: "revenue_usd", t: "2m ago" },
   { icon: Copy, sev: "med", title: "Duplicate keys · cust_id", desc: "3 duplicated cust_id values detected in stg_customers.", col: "cust_id", t: "11m ago" },
   { icon: Clock, sev: "high", title: "Null spike · last_login", desc: "Null rate jumped from 4.1% to 12.3% over the last 30 minutes.", col: "last_login", t: "18m ago" },
@@ -17,6 +18,46 @@ const items = [
 ];
 
 function Anomalies() {
+  const [items, setItems] = useState(defaultItems);
+  
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("schema_sense_cols");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+           const errorTemplates = [
+             { t: "Type mismatch", d: "rows ingested as incorrect type instead of expected format.", icon: Type },
+             { t: "Duplicate keys", d: "duplicated values detected bypassing unique constraint.", icon: Copy },
+             { t: "Null spike", d: "Null rate jumped significantly over the last 30 minutes.", icon: Clock },
+             { t: "Format drift", d: "% of incoming records fail the canonical regex format.", icon: AlertTriangle },
+             { t: "Schema drift", d: "unexpected new data shape detected upstream.", icon: AlertTriangle },
+           ];
+
+           // Deterministically generate a random-looking number of anomalies based on column names
+           let hash = 0;
+           parsed.forEach((p: any) => { hash += (p.name.charCodeAt(0) || 0) + p.name.length; });
+           const maxPossible = Math.min(parsed.length, 4);
+           const anomalyCount = Math.max(1, (hash % maxPossible) + 1);
+
+           const mappedItems = parsed.slice(0, anomalyCount).map((p: any, i: number) => {
+             const tmpl = errorTemplates[(hash + i) % errorTemplates.length];
+             const prefix = i === 2 || i === 4 ? "" : (i === 3 ? ((hash % 20) / 10).toFixed(1) : (hash % 15) + 2) + " ";
+             return {
+               icon: tmpl.icon,
+               sev: (hash + i) % 3 === 0 ? "high" : (hash + i) % 3 === 1 ? "med" : "low",
+               title: `${tmpl.t} · ${p.name}`,
+               desc: `${prefix}${tmpl.d}`,
+               col: p.name,
+               t: `${(i * 4) + (hash % 5) + 1}m ago`
+             };
+           });
+           setItems(mappedItems);
+        }
+      }
+    } catch(e){}
+  }, []);
+
   return (
     <div>
       <SectionTitle

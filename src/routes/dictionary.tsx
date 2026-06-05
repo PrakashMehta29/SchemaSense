@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "motion/react";
+import { useState, useEffect } from "react";
 import { Search, Sparkles } from "lucide-react";
 import { GlassCard, Pill, SectionTitle } from "@/components/ui-bits";
 
@@ -8,7 +9,7 @@ export const Route = createFileRoute("/dictionary")({
   component: Dictionary,
 });
 
-const rows = [
+const defaultRows = [
   { col: "cust_id", type: "uuid", nullable: false, def: "Unique customer identifier issued at signup.", lineage: ["raw.users", "stg_customers", "dim_customer"] },
   { col: "email", type: "string", nullable: true, def: "Primary contact email — lower-cased and trimmed during ingestion.", lineage: ["raw.users", "dim_customer"] },
   { col: "signup_ts", type: "timestamp", nullable: false, def: "UTC moment the user completed onboarding.", lineage: ["raw.events", "fact_signup"] },
@@ -22,6 +23,27 @@ const rows = [
 ];
 
 function Dictionary() {
+  const [rows, setRows] = useState(defaultRows);
+  
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("schema_sense_cols");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+           const mappedRows = parsed.map((p: any) => ({
+             col: p.name,
+             type: p.type,
+             nullable: p.null !== "0%",
+             def: `Dynamic definition generated for ${p.name}.`,
+             lineage: ["raw.upload", "stg_dynamic"]
+           }));
+           setRows(mappedRows);
+        }
+      }
+    } catch(e){}
+  }, []);
+
   return (
     <div>
       <SectionTitle
