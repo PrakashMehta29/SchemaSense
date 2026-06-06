@@ -106,7 +106,7 @@ function UploadPage() {
         sub="CSV, Parquet, JSON, or a live warehouse connection. SchemaSense profiles the structure on contact."
       />
 
-      <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
+      <div className="max-w-3xl mx-auto w-full">
         <GlassCard
           className={`relative overflow-hidden p-10 transition-colors ${
             dragOver ? "border-primary/60 bg-primary/5" : ""
@@ -230,39 +230,6 @@ function UploadPage() {
               </div>
             </div>
           )}
-
-
-        </GlassCard>
-
-        <GlassCard className="p-6">
-          <div className="flex items-center justify-between">
-            <div className="font-mono-tight text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-              Detected columns
-            </div>
-            <Pill tone={isProcessing ? "lime" : started ? "lime" : "muted"}>
-              {isProcessing ? "Scanning..." : started ? "Complete" : "Idle"}
-            </Pill>
-          </div>
-          <ul className="mt-4 divide-y divide-border/60">
-            {columns.map((c, i) => (
-              <motion.li
-                key={c.name}
-                initial={{ opacity: 0, x: -10 }}
-                animate={started ? { opacity: 1, x: 0 } : { opacity: 0.25, x: -10 }}
-                transition={{ delay: started ? i * 0.12 : 0, duration: 0.4 }}
-                className="flex items-center justify-between py-2.5"
-              >
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
-                  <span className="font-mono-tight text-sm">{c.name}</span>
-                </div>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                  <span className="font-mono-tight">{c.type}</span>
-                  <span className="tabular-nums">{c.null}</span>
-                </div>
-              </motion.li>
-            ))}
-          </ul>
         </GlassCard>
       </div>
     </div>

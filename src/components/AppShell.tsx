@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import DataCloud from "./DataCloud";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  Upload, BookOpen, MessageSquare, BarChart3, AlertTriangle,
-  GitBranch, Download, LayoutDashboard, Sun, Moon, Mic, Globe
+  Upload, BookOpen, MessageSquare, BarChart3,
+  GitBranch, Download, LayoutDashboard, Settings
 } from "lucide-react";
 import { BrandLogo } from "./BrandLogo";
 
@@ -14,7 +14,7 @@ const navGroups = [
     items: [
       { to: "/", label: "Dashboard", icon: LayoutDashboard },
       { to: "/summary", label: "Summary", icon: BarChart3 },
-      { to: "/anomalies", label: "Anomalies", icon: AlertTriangle },
+      { to: "/lineage", label: "Lineage", icon: GitBranch },
     ]
   },
   {
@@ -29,8 +29,6 @@ const navGroups = [
     title: "INTELLIGENCE",
     items: [
       { to: "/ask", label: "Ask AI", icon: MessageSquare },
-      { to: "/talkto-speech", label: "Talkto speech", icon: Mic },
-      { to: "/multilingual", label: "Multilingual", icon: Globe },
     ]
   }
 ];
@@ -38,12 +36,7 @@ const navGroups = [
 export function AppShell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   
-  // Theme toggle state
-  const [isDark, setIsDark] = useState(false);
-  useEffect(() => {
-    if (isDark) document.documentElement.classList.add("dark");
-    else document.documentElement.classList.remove("dark");
-  }, [isDark]);
+
 
   return (
     <div className="flex w-screen h-screen overflow-hidden bg-transparent text-foreground">
@@ -89,13 +82,29 @@ export function AppShell() {
           ))}
         </nav>
 
-        <div className="mt-auto rounded-xl border glass-panel-heavy p-4">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="h-2 w-2 animate-pulse-dot rounded-full bg-primary glow-lime" />
-            Engine online
-          </div>
-          <div className="mt-1 font-mono-tight text-[11px] text-muted-foreground/80">
-            v0.42 · region us-east
+        <div className="mt-auto flex flex-col gap-2.5">
+          <Link
+            to="/settings"
+            className={`group relative flex items-center justify-between rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${
+              pathname.startsWith("/settings")
+                ? "border border-primary/20 bg-primary/10 text-primary shadow-[inset_0_0_20px_rgba(16,185,129,0.05)]"
+                : "border border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <Settings className="h-[18px] w-[18px]" />
+              <span className="font-medium">Settings</span>
+            </div>
+          </Link>
+
+          <div className="rounded-xl border glass-panel-heavy p-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="h-2 w-2 animate-pulse-dot rounded-full bg-primary glow-lime" />
+              Engine online
+            </div>
+            <div className="mt-1 font-mono-tight text-[11px] text-muted-foreground/80">
+              v0.42 · region us-east
+            </div>
           </div>
         </div>
       </aside>
@@ -103,27 +112,6 @@ export function AppShell() {
       {/* Main */}
       <main className="flex-1 h-full overflow-y-auto relative z-10 bg-transparent flex flex-col">
         
-        {/* Top Alignment Wrapper for Theme Toggle */}
-        <div className="w-full max-w-[1600px] mx-auto px-8 pt-8 relative z-50">
-          <div className="flex justify-end hidden md:flex items-center">
-            <button 
-              onClick={() => setIsDark(!isDark)} 
-              className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-full glass-panel-heavy hover:bg-black/5 dark:hover:bg-white/10 transition-colors shadow-sm border border-border"
-            >
-              {isDark ? (
-                <>
-                  <Sun className="w-4 h-4 text-primary" />
-                  <span>Light Mode</span>
-                </>
-              ) : (
-                <>
-                  <Moon className="w-4 h-4 text-primary" />
-                  <span>Dark Mode</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
 
         {/* Mobile top bar */}
         <div className="flex items-center justify-between border-b border-border/60 bg-background/60 px-4 py-3 backdrop-blur md:hidden mb-8">
@@ -141,7 +129,7 @@ export function AppShell() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ type: "spring", stiffness: 220, damping: 26 }}
-            className="w-full max-w-[1600px] mx-auto px-8 pb-24"
+            className="w-full max-w-[1600px] mx-auto px-8 pt-8 pb-24"
           >
             <Outlet />
           </motion.div>

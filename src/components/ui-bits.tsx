@@ -28,13 +28,15 @@ export function GlassCard({ children, className = "" }: { children: ReactNode; c
   );
 }
 
-export function CountUp({ to, duration = 1.6, suffix = "" }: { to: number; duration?: number; suffix?: string }) {
+export function CountUp({ to, duration = 1.6, suffix = "", decimals }: { to: number; duration?: number; suffix?: string; decimals?: number }) {
   const ref = useRef<HTMLSpanElement | null>(null);
   const inView = useInView(ref, { once: true });
   const mv = useMotionValue(0);
   const rounded = useTransform(mv, (v) => {
-    const n = to >= 100 ? Math.round(v) : Math.round(v * 10) / 10;
-    return n.toLocaleString();
+    const dec = decimals !== undefined ? decimals : (to >= 100 || Number.isInteger(to) ? 0 : 1);
+    const factor = Math.pow(10, dec);
+    const n = dec === 0 ? Math.round(v) : Math.round(v * factor) / factor;
+    return n.toLocaleString(undefined, { minimumFractionDigits: dec, maximumFractionDigits: dec });
   });
   useEffect(() => {
     if (inView) animate(mv, to, { duration, ease: [0.16, 1, 0.3, 1] });

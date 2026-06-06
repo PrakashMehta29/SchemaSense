@@ -12,12 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as UploadRouteImport } from './routes/upload'
 import { Route as TalktoSpeechRouteImport } from './routes/talkto-speech'
 import { Route as SummaryRouteImport } from './routes/summary'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as MultilingualRouteImport } from './routes/multilingual'
 import { Route as LineageRouteImport } from './routes/lineage'
 import { Route as ExportRouteImport } from './routes/export'
 import { Route as DictionaryRouteImport } from './routes/dictionary'
 import { Route as AskRouteImport } from './routes/ask'
-import { Route as AnomaliesRouteImport } from './routes/anomalies'
 import { Route as IndexRouteImport } from './routes/index'
 
 const UploadRoute = UploadRouteImport.update({
@@ -33,6 +33,11 @@ const TalktoSpeechRoute = TalktoSpeechRouteImport.update({
 const SummaryRoute = SummaryRouteImport.update({
   id: '/summary',
   path: '/summary',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MultilingualRoute = MultilingualRouteImport.update({
@@ -60,11 +65,6 @@ const AskRoute = AskRouteImport.update({
   path: '/ask',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AnomaliesRoute = AnomaliesRouteImport.update({
-  id: '/anomalies',
-  path: '/anomalies',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -73,24 +73,24 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/anomalies': typeof AnomaliesRoute
   '/ask': typeof AskRoute
   '/dictionary': typeof DictionaryRoute
   '/export': typeof ExportRoute
   '/lineage': typeof LineageRoute
   '/multilingual': typeof MultilingualRoute
+  '/settings': typeof SettingsRoute
   '/summary': typeof SummaryRoute
   '/talkto-speech': typeof TalktoSpeechRoute
   '/upload': typeof UploadRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/anomalies': typeof AnomaliesRoute
   '/ask': typeof AskRoute
   '/dictionary': typeof DictionaryRoute
   '/export': typeof ExportRoute
   '/lineage': typeof LineageRoute
   '/multilingual': typeof MultilingualRoute
+  '/settings': typeof SettingsRoute
   '/summary': typeof SummaryRoute
   '/talkto-speech': typeof TalktoSpeechRoute
   '/upload': typeof UploadRoute
@@ -98,12 +98,12 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/anomalies': typeof AnomaliesRoute
   '/ask': typeof AskRoute
   '/dictionary': typeof DictionaryRoute
   '/export': typeof ExportRoute
   '/lineage': typeof LineageRoute
   '/multilingual': typeof MultilingualRoute
+  '/settings': typeof SettingsRoute
   '/summary': typeof SummaryRoute
   '/talkto-speech': typeof TalktoSpeechRoute
   '/upload': typeof UploadRoute
@@ -112,36 +112,36 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/anomalies'
     | '/ask'
     | '/dictionary'
     | '/export'
     | '/lineage'
     | '/multilingual'
+    | '/settings'
     | '/summary'
     | '/talkto-speech'
     | '/upload'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/anomalies'
     | '/ask'
     | '/dictionary'
     | '/export'
     | '/lineage'
     | '/multilingual'
+    | '/settings'
     | '/summary'
     | '/talkto-speech'
     | '/upload'
   id:
     | '__root__'
     | '/'
-    | '/anomalies'
     | '/ask'
     | '/dictionary'
     | '/export'
     | '/lineage'
     | '/multilingual'
+    | '/settings'
     | '/summary'
     | '/talkto-speech'
     | '/upload'
@@ -149,12 +149,12 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AnomaliesRoute: typeof AnomaliesRoute
   AskRoute: typeof AskRoute
   DictionaryRoute: typeof DictionaryRoute
   ExportRoute: typeof ExportRoute
   LineageRoute: typeof LineageRoute
   MultilingualRoute: typeof MultilingualRoute
+  SettingsRoute: typeof SettingsRoute
   SummaryRoute: typeof SummaryRoute
   TalktoSpeechRoute: typeof TalktoSpeechRoute
   UploadRoute: typeof UploadRoute
@@ -181,6 +181,13 @@ declare module '@tanstack/react-router' {
       path: '/summary'
       fullPath: '/summary'
       preLoaderRoute: typeof SummaryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/multilingual': {
@@ -218,13 +225,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AskRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/anomalies': {
-      id: '/anomalies'
-      path: '/anomalies'
-      fullPath: '/anomalies'
-      preLoaderRoute: typeof AnomaliesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -237,12 +237,12 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AnomaliesRoute: AnomaliesRoute,
   AskRoute: AskRoute,
   DictionaryRoute: DictionaryRoute,
   ExportRoute: ExportRoute,
   LineageRoute: LineageRoute,
   MultilingualRoute: MultilingualRoute,
+  SettingsRoute: SettingsRoute,
   SummaryRoute: SummaryRoute,
   TalktoSpeechRoute: TalktoSpeechRoute,
   UploadRoute: UploadRoute,

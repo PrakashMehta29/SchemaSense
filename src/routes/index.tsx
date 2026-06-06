@@ -92,8 +92,8 @@ function Index() {
               kicker="LIVE · PROCESSING"
               dotPulse
               title="orders_2026.parquet"
-              metric="2 : 1"
-              detail="Throughput · 14.2k rows/s"
+              metric="1.5"
+              detail="Read/Write Ratio · 14.2k rows/s"
               tone="lime"
               delay={0.1}
             />
@@ -101,7 +101,7 @@ function Index() {
               kicker="TOP COLUMN ISSUES"
               shake
               title="cust_id · email · ts_created"
-              metric="36.2"
+              metric="36.2%"
               detail="Drift score · 3 columns affected"
               tone="red"
               delay={0.25}
@@ -110,7 +110,7 @@ function Index() {
               kicker="SYSTEM OVERVIEW"
               dotPulse
               title="All engines nominal"
-              metric="99.98"
+              metric="99.98%"
               detail="Uptime % · last 30 days"
               tone="lime"
               delay={0.4}
@@ -136,30 +136,32 @@ function Index() {
 
       {/* Modules */}
       <div>
-        <SectionTitle kicker="Modules" title={<>Eight surfaces. One <span className="text-primary">brain.</span></>} />
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <SectionTitle kicker="Modules" title={<>Core <span className="text-primary">Modules</span></>} />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[
-            { t: "Upload", d: "Drag, drop, ingest." },
-            { t: "Dictionary", d: "AI-written column defs." },
-            { t: "Ask AI", d: "Chat with your schema." },
-            { t: "Profiler", d: "Distributions & nulls." },
-            { t: "Anomalies", d: "Live drift alerts." },
-            { t: "Lineage", d: "Visual data graph." },
-            { t: "Export", d: "JSON · CSV · PDF." },
-            { t: "Engine", d: "Real-time, always-on." },
+            { t: "Upload",     d: "Drag, drop, ingest.",          href: "/upload"     },
+            { t: "Dictionary", d: "AI-written column defs.",       href: "/dictionary" },
+            { t: "Ask AI",     d: "Chat with your schema.",        href: "/ask"        },
+            { t: "Summary",    d: "Distributions & nulls.",        href: "/summary"    },
+            { t: "Lineage",    d: "Visual data graph.",            href: "/lineage"    },
+            { t: "Export",     d: "JSON · CSV · PDF.",             href: "/export"     },
           ].map((m, i) => (
-            <motion.div
+            <motion.a
               key={m.t}
+              href={m.href}
               initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.05 }}
-              className="group relative overflow-hidden rounded-xl border glass-panel-heavy backdrop-blur-md p-5 transition-colors"
+              className="group relative overflow-hidden rounded-xl border glass-panel-heavy backdrop-blur-md p-6 transition-all duration-300 hover:border-primary/30 hover:shadow-[0_8px_24px_rgba(242,120,92,0.1)]"
             >
               <div className="font-display text-xl font-semibold">{m.t}</div>
               <div className="mt-1 text-sm text-muted-foreground">{m.d}</div>
               <div className="absolute -right-6 -top-6 h-16 w-16 rounded-full bg-primary/0 blur-2xl transition-all group-hover:bg-primary/30" />
-            </motion.div>
+              <div className="mt-4 font-mono-tight text-[10px] uppercase tracking-wider text-primary/0 transition-all group-hover:text-primary/60">
+                Open →
+              </div>
+            </motion.a>
           ))}
         </div>
       </div>

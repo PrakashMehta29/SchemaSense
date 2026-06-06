@@ -1,3 +1,0 @@
-cust_id,email,signup_ts,country,revenue_usd,is_active,plan_tier,last_login
-1,user1@example.com,2024-01-01T00:00:00Z,US,100.50,true,premium,2024-01-10T12:00:00Z
-2,user2@example.com,2024-01-02T00:00:00Z,UK,50.00,false,basic,2024-01-05T08:30:00Z
