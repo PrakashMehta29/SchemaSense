@@ -1,369 +1,511 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { motion, AnimatePresence } from "motion/react";
-import { useState, useEffect, useRef } from "react";
-import { Search, Sparkles, Pencil, Check, X, ShieldAlert, Filter } from "lucide-react";
-import { GlassCard, Pill, SectionTitle } from "@/components/ui-bits";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import React, { useState, useEffect } from "react";
+import { Search, Layers, Database, Check, ArrowRight, ShieldCheck, HelpCircle } from "lucide-react";
+import { SectionTitle, GlassCard } from "@/components/ui-bits";
+import { MetadataCard, ColMetadata } from "@/components/dictionary/MetadataCard";
+import { MetadataGenerationModal } from "@/components/dictionary/MetadataGenerationModal";
+import { MetadataSkeleton } from "@/components/dictionary/MetadataSkeleton";
+import { useWorkspace } from "@/lib/WorkspaceContext";
+import { enableDemoMode } from "@/lib/demoModeService";
+import { EmptyState } from "@/components/EmptyState";
 
 export const Route = createFileRoute("/dictionary")({
   head: () => ({
     meta: [
       { title: "Dictionary · SchemaSense" },
-      { name: "description", content: "AI-written definitions, types, nullability, and lineage for every column." },
+      { name: "description", content: "AI-powered definitions, types, business meaning, and confidence for every column." },
     ],
   }),
   component: Dictionary,
 });
 
-// ─── Column data ──────────────────────────────────────────────────────────────
-type ColRow = {
-  col: string;
-  type: string;
-  nullable: boolean;
-  pii: boolean;
-  missingDef: boolean;
-  def: string;
-  lineage: string[];
+// ─── Default Detail Mock Metadata Database ─────────────────────────────────────
+const MOCK_METADATA_DATABASE: Record<string, Omit<ColMetadata, "name" | "type">> = {
+  cust_id: {
+    nullPct: "0.0%",
+    uniquePct: "100.0%",
+    description: "Unique customer identifier assigned at account creation. Immutable once set.",
+    meaning: "Primary lookup key for customer profile routing. Syncs downstream with Salesforce Account ID.",
+    context: "Referenced by billing, support systems, product analytics, and customer success teams.",
+    samples: ["0001bc5a-4ba5-4e23-bd43-466d6d25aee9", "fffe402a-d1d2-4be7-9bee-3f007087570a"],
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    relations: ["orders.cust_id", "payments.cust_id", "sessions.cust_id"],
+    isFk: true,
+    sensitivity: "Medium",
+    pii: false,
+    complianceTags: ["GDPR", "CCPA"],
+    confidence: 98,
+  },
+  email: {
+    nullPct: "2.1%",
+    uniquePct: "92.4%",
+    description: "Primary contact email address. Lower-cased, validated and trimmed during ingestion.",
+    meaning: "Primary email address for marketing campaigns, billing invoices, and notification dispatches.",
+    context: "Used across marketing automation, CRM integrations, and billing servers.",
+    samples: ["customer1@company.com", "user.name@domain.io"],
+    pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
+    relations: ["raw.users.email", "marketing.contacts.email"],
+    isFk: false,
+    sensitivity: "Critical",
+    pii: true,
+    complianceTags: ["GDPR", "HIPAA"],
+    confidence: 95,
+  },
+  signup_ts: {
+    nullPct: "0.0%",
+    uniquePct: "10.4%",
+    description: "UTC timestamp marking the moment the user completed onboarding, signed terms, and activated account.",
+    meaning: "Cohort reference timestamp for product activation, retention models, and churn metrics.",
+    context: "Required by Growth Analytics, Product Management, and Finance reporting.",
+    samples: ["2024-01-02 08:32:00", "2026-06-03 15:00:00"],
+    pattern: "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+    relations: [],
+    isFk: false,
+    sensitivity: "Low",
+    pii: false,
+    complianceTags: [],
+    confidence: 99,
+  },
+  country: {
+    nullPct: "0.4%",
+    uniquePct: "0.01%",
+    description: "ISO 3166-1 alpha-2 country code resolved from IP address at signup time.",
+    meaning: "Geographic code for localized tax computing, billing currencies, and geographic feature flags.",
+    context: "Referenced by Billing compliance, regional localization teams, and security firewalls.",
+    samples: ["US", "GB", "DE", "FR"],
+    pattern: "^[A-Z]{2}$",
+    relations: [],
+    isFk: false,
+    sensitivity: "Low",
+    pii: false,
+    complianceTags: ["GDPR"],
+    confidence: 92,
+  },
+  revenue_usd: {
+    nullPct: "8.7%",
+    uniquePct: "5.0%",
+    description: "Trailing 30-day gross revenue in USD, normalized using daily currency FX rates.",
+    meaning: "Core financial KPI representing customer spending tiers and corporate subscription tier.",
+    context: "Read by Finance, Executive Dashboard, billing engines, and investor relations.",
+    samples: ["120.50", "1500.00", "0.00"],
+    pattern: "^\\d+\\.\\d{2}$",
+    relations: ["fact_revenue.amount_usd"],
+    isFk: true,
+    sensitivity: "Medium",
+    pii: false,
+    complianceTags: ["SOC2"],
+    confidence: 94,
+  },
+  is_active: {
+    nullPct: "0.0%",
+    uniquePct: "0.0%",
+    description: "True when the user has authenticated at least once within the last 30 days.",
+    meaning: "Standard flag defining active user metrics (DAU/MAU) for active product tracking.",
+    context: "Referenced by Growth marketing campaigns, Product analytics, and system monitoring.",
+    samples: ["true", "false"],
+    pattern: "^(true|false)$",
+    relations: [],
+    isFk: false,
+    sensitivity: "Low",
+    pii: false,
+    complianceTags: [],
+    confidence: 97,
+  },
+  plan_tier: {
+    nullPct: "0.0%",
+    uniquePct: "0.0%",
+    description: "Subscription tier classification (free, basic, pro, team, or enterprise).",
+    meaning: "Dictates system resource limits, user seating capacities, and access control scopes.",
+    context: "Used by Billing engines, authentication gateways, and customer metrics.",
+    samples: ["free", "pro", "enterprise"],
+    pattern: "^(free|basic|pro|team|enterprise)$",
+    relations: ["dim_plan.plan_tier"],
+    isFk: true,
+    sensitivity: "Low",
+    pii: false,
+    complianceTags: [],
+    confidence: 96,
+  },
+  last_login: {
+    nullPct: "12.3%",
+    uniquePct: "10.0%",
+    description: "Most recent successful authentication event timestamp in UTC.",
+    meaning: "Last authentication audit trail used to trace session lifecycle and clean up inactive sessions.",
+    context: "Monitored by Security and compliance, support engineering, and session garbage collector.",
+    samples: ["2026-06-03 14:15:00", "2026-06-10 11:00:00"],
+    pattern: "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+    relations: ["sessions.last_login"],
+    isFk: true,
+    sensitivity: "Low",
+    pii: false,
+    complianceTags: [],
+    confidence: 93,
+  },
+  
+  // Orders columns metadata
+  order_id: {
+    nullPct: "0.0%",
+    uniquePct: "100.0%",
+    description: "Unique order hash generated during Stripe checkout initiation.",
+    meaning: "Primary transactional checkout lookup key mapping purchases in sales tables.",
+    context: "Referenced by logistics, invoicing pipelines, and customer order management.",
+    samples: ["ord-7b89f2a5-5b6f", "ord-fa025619-bc9d"],
+    pattern: "^ord-[0-9a-f]{8}-[0-9a-f]{4}$",
+    relations: ["payments.order_id"],
+    isFk: false,
+    sensitivity: "Low",
+    pii: false,
+    complianceTags: [],
+    confidence: 99,
+  },
+  order_date: {
+    nullPct: "0.0%",
+    uniquePct: "100.0%",
+    description: "Ingestion time when invoice was generated and processed.",
+    meaning: "Standard order creation date cohort used for computing daily sales metrics.",
+    context: "Finance reporting databases and inventory metrics lookup tables.",
+    samples: ["2026-06-10 14:30:00", "2026-06-11 09:12:00"],
+    pattern: "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+    relations: [],
+    isFk: false,
+    sensitivity: "Low",
+    pii: false,
+    complianceTags: [],
+    confidence: 98,
+  },
+  amount_usd: {
+    nullPct: "5.4%",
+    uniquePct: "45.0%",
+    description: "Gross payment total in USD processed through merchant gateway.",
+    meaning: "Net transaction price charged to client, excluding applicable tax rebates.",
+    context: "Referenced in payment ledgers, bookkeeping reconciliation, and executive dashboards.",
+    samples: ["45.99", "129.00", "599.99"],
+    pattern: "^\\d+\\.\\d{2}$",
+    relations: ["fact_revenue.amount_usd"],
+    isFk: false,
+    sensitivity: "Medium",
+    pii: false,
+    complianceTags: [],
+    confidence: 94,
+  },
+  status: {
+    nullPct: "0.0%",
+    uniquePct: "0.0%",
+    description: "Checkout state ('pending', 'completed', 'cancelled').",
+    meaning: "Fulfillment tracking trigger specifying whether products are shipped or active.",
+    context: "Inventory routing logic, refunds process gates, and analytics monitors.",
+    samples: ["completed", "pending", "cancelled"],
+    pattern: "^(completed|pending|cancelled)$",
+    relations: [],
+    isFk: false,
+    sensitivity: "Low",
+    pii: false,
+    complianceTags: [],
+    confidence: 97,
+  },
+
+  // Payments columns metadata
+  payment_id: {
+    nullPct: "0.0%",
+    uniquePct: "100.0%",
+    description: "Merchant ledger transaction verification ID.",
+    meaning: "Stripe payout token mapping transactional details for legal bookkeeping.",
+    context: "Legal audits, reconciliation systems, and dispute resolution portals.",
+    samples: ["ch_3M4v8xL2e", "ch_9Kd1p0E5w"],
+    pattern: "^ch_[a-zA-Z0-9]{9,15}$",
+    relations: [],
+    isFk: false,
+    sensitivity: "High",
+    pii: false,
+    complianceTags: ["PCI-DSS"],
+    confidence: 96,
+  },
+  payment_method: {
+    nullPct: "1.2%",
+    uniquePct: "0.0%",
+    description: "Payment channel name ('credit_card', 'paypal', 'apple_pay').",
+    meaning: "Customer checkout choice mapping transactional fees processing classes.",
+    context: "Invoicing tools, marketing conversion funnels, and checkout optimization logs.",
+    samples: ["credit_card", "paypal", "apple_pay"],
+    pattern: "^(credit_card|paypal|apple_pay|wire)$",
+    relations: [],
+    isFk: false,
+    sensitivity: "Medium",
+    pii: false,
+    complianceTags: [],
+    confidence: 95,
+  },
+  billing_zip: {
+    nullPct: "18.5%",
+    uniquePct: "10.0%",
+    description: "Billing card ZIP / Postal Code verified through AVS.",
+    meaning: "Zip code associated with card credit limit checks for fraud mitigation.",
+    context: "Fraud monitors, payment gateways validation, and regional sales distribution audits.",
+    samples: ["94103", "90210", "10011"],
+    pattern: "^[0-9]{5}(-[0-9]{4})?$",
+    relations: [],
+    isFk: false,
+    sensitivity: "Sensitive",
+    pii: true,
+    complianceTags: ["GDPR", "CCPA"],
+    confidence: 91,
+  },
 };
 
-const defaultRows: ColRow[] = [
-  {
-    col: "cust_id", type: "uuid", nullable: false, pii: false, missingDef: false,
-    def: "Unique customer identifier assigned at account creation. Immutable once set.",
-    lineage: ["raw.users", "stg_customers", "dim_customer"],
-  },
-  {
-    col: "email", type: "string", nullable: true, pii: true, missingDef: false,
-    def: "Primary contact email address. Lower-cased and trimmed during ingestion pipeline.",
-    lineage: ["raw.users", "dim_customer"],
-  },
-  {
-    col: "signup_ts", type: "timestamp", nullable: false, pii: false, missingDef: false,
-    def: "UTC moment the user completed onboarding and account verification.",
-    lineage: ["raw.events", "fact_signup"],
-  },
-  {
-    col: "country", type: "string(2)", nullable: false, pii: false, missingDef: false,
-    def: "ISO 3166-1 alpha-2 country code resolved from IP address at signup time.",
-    lineage: ["raw.events", "dim_geo"],
-  },
-  {
-    col: "revenue_usd", type: "decimal(12,2)", nullable: true, pii: false, missingDef: false,
-    def: "Trailing 30-day gross revenue in USD, normalized across currencies using daily FX rates.",
-    lineage: ["raw.payments", "fact_revenue", "mart_finance"],
-  },
-  {
-    col: "is_active", type: "boolean", nullable: false, pii: false, missingDef: false,
-    def: "True when the user has authenticated at least once within the last 30 days.",
-    lineage: ["fact_sessions", "dim_customer"],
-  },
-  {
-    col: "plan_tier", type: "enum", nullable: false, pii: false, missingDef: false,
-    def: "Subscription tier — one of: free, pro, team, or enterprise.",
-    lineage: ["raw.subscriptions", "dim_plan"],
-  },
-  {
-    col: "last_login", type: "timestamp", nullable: true, pii: false, missingDef: false,
-    def: "Most recent successful authentication event timestamp in UTC.",
-    lineage: ["raw.auth", "fact_sessions"],
-  },
-  {
-    col: "churn_risk", type: "float", nullable: true, pii: false, missingDef: true,
-    def: "",
-    lineage: ["model.churn_v3", "mart_growth"],
-  },
-  {
-    col: "lifetime_orders", type: "int", nullable: false, pii: false, missingDef: true,
-    def: "",
-    lineage: ["fact_orders", "dim_customer"],
-  },
-  {
-    col: "phone_number", type: "string", nullable: true, pii: true, missingDef: false,
-    def: "E.164-formatted contact phone number. Used for 2FA and support escalation only.",
-    lineage: ["raw.users", "dim_customer"],
-  },
-];
+function Dictionary() {
+  const navigate = useNavigate();
+  const { hasDataset, activeDatasetName, columns: wsColumns, metadataGenerated, refreshWorkspace } = useWorkspace();
+  const [activeDataset, setActiveDataset] = useState("customers.csv");
+  const [columns, setColumns] = useState<{ name: string; type: string }[]>([]);
+  const [metadata, setMetadata] = useState<Record<string, ColMetadata>>({});
+  const [isGenerated, setIsGenerated] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  const [query, setQuery] = useState("");
+  const [expandedCols, setExpandedCols] = useState<Record<string, boolean>>({});
 
-// ─── Type badge colours ────────────────────────────────────────────────────────
-const TYPE_COLORS: Record<string, string> = {
-  uuid:           "bg-violet-500/15 text-violet-600 border-violet-400/30",
-  string:         "bg-blue-500/15 text-blue-600 border-blue-400/30",
-  "string(2)":    "bg-blue-500/15 text-blue-600 border-blue-400/30",
-  timestamp:      "bg-amber-500/15 text-amber-600 border-amber-400/30",
-  "decimal(12,2)":"bg-emerald-500/15 text-emerald-600 border-emerald-400/30",
-  float:          "bg-emerald-500/15 text-emerald-600 border-emerald-400/30",
-  int:            "bg-emerald-500/15 text-emerald-600 border-emerald-400/30",
-  boolean:        "bg-sky-500/15 text-sky-600 border-sky-400/30",
-  enum:           "bg-pink-500/15 text-pink-600 border-pink-400/30",
-};
-function typeCls(t: string) {
-  return TYPE_COLORS[t] ?? "bg-muted text-muted-foreground border-border";
-}
-
-// ─── Filter chips ─────────────────────────────────────────────────────────────
-type FilterId = "all" | "missing" | "pii";
-const FILTERS: { id: FilterId; label: string }[] = [
-  { id: "all",     label: "All Columns"         },
-  { id: "missing", label: "Missing Definitions" },
-  { id: "pii",     label: "PII / Sensitive"     },
-];
-
-// ─── Editable definition cell ─────────────────────────────────────────────────
-function DefCell({ def, missingDef, onSave }: { def: string; missingDef: boolean; onSave: (v: string) => void }) {
-  const [editing, setEditing] = useState(false);
-  const [draft,   setDraft]   = useState(def);
-  const taRef = useRef<HTMLTextAreaElement>(null);
-
+  // Sync from workspace context whenever hasDataset or wsColumns change
   useEffect(() => {
-    if (editing) taRef.current?.focus();
-  }, [editing]);
+    if (!hasDataset) return;
+    setActiveDataset(activeDatasetName || "customers.csv");
+    if (wsColumns.length > 0) {
+      setColumns(wsColumns.map((c) => ({ name: c.name, type: c.type })));
+    }
 
-  const commit = () => { onSave(draft); setEditing(false); };
-  const cancel = () => { setDraft(def); setEditing(false); };
+    // Load metadata if already generated
+    const generatedFlag = localStorage.getItem("schema_sense_metadata_generated");
+    if (generatedFlag === "1") {
+      setIsGenerated(true);
+      const savedMeta = localStorage.getItem("schema_sense_dictionary_metadata");
+      if (savedMeta) {
+        try { setMetadata(JSON.parse(savedMeta)); } catch (_) {}
+      }
+    }
+  }, [hasDataset, activeDatasetName, wsColumns, metadataGenerated]);
 
-  if (editing) {
+
+  const handleOpenGenerationModal = () => {
+    setIsModalOpen(true);
+  };
+
+  const handleGenerationComplete = () => {
+    setIsModalOpen(false);
+    setIsGenerating(true);
+
+    setTimeout(() => {
+      const newMeta: Record<string, ColMetadata> = { ...metadata };
+      columns.forEach((col) => {
+        const defaults = MOCK_METADATA_DATABASE[col.name];
+        
+        newMeta[col.name] = {
+          name: col.name,
+          type: col.type,
+          nullPct: defaults?.nullPct || "0.0%",
+          uniquePct: defaults?.uniquePct || "80.0%",
+          description: defaults?.description || `AI-inferred description for column '${col.name}' identifying patterns and range bounds.`,
+          meaning: defaults?.meaning || `Business definition mapping column '${col.name}' to core business entities.`,
+          context: defaults?.context || "Used across database queries, lookup transformations, and analytical schemas.",
+          samples: defaults?.samples || ["Value_A", "Value_B"],
+          pattern: defaults?.pattern,
+          relations: defaults?.relations || [],
+          isFk: defaults?.isFk || false,
+          sensitivity: defaults?.sensitivity || "Low",
+          pii: defaults?.pii || false,
+          complianceTags: defaults?.complianceTags || [],
+          confidence: defaults?.confidence || Math.floor(Math.random() * 15) + 82, // range 82 - 97%
+        };
+      });
+
+      setMetadata(newMeta);
+      setIsGenerated(true);
+      setIsGenerating(false);
+
+      try {
+        localStorage.setItem("schema_sense_metadata_generated", "1");
+        localStorage.setItem("schema_sense_dictionary_metadata", JSON.stringify(newMeta));
+      } catch (_) {}
+    }, 1500);
+  };
+
+  const toggleExpand = (colName: string) => {
+    setExpandedCols((prev) => ({
+      ...prev,
+      [colName]: !prev[colName],
+    }));
+  };
+
+  // 1. Show Redesigned Empty State if no dataset exists
+  if (!hasDataset) {
     return (
-      <div className="flex flex-col gap-2">
-        <textarea
-          ref={taRef}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          rows={3}
-          className="w-full resize-none rounded-lg border border-primary/40 bg-background/70 px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+      <div className="py-12 space-y-8">
+        <SectionTitle
+          kicker="Data Dictionary"
+          title={<>Data <span className="text-primary">Dictionary.</span></>}
+          sub="Browse catalog attributes, database types, business definitions, and data compliance metadata."
         />
-        <div className="flex gap-1.5">
-          <button
-            onClick={commit}
-            className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-[10px] font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
-          >
-            <Check className="h-3 w-3" /> Save
-          </button>
-          <button
-            onClick={cancel}
-            className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <X className="h-3 w-3" /> Cancel
-          </button>
+        <div className="mt-8">
+          <EmptyState
+            title="No Dataset Connected"
+            description="Upload a dataset to generate visual data dictionaries, profile field formats, and trace metadata stats."
+            features={[
+              "AI definition generation",
+              "Column type & null analysis",
+              "Primary & foreign key detection",
+              "PII classification tags",
+            ]}
+            onSecondaryAction={() => {
+              enableDemoMode();
+              refreshWorkspace();
+            }}
+          />
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="group/def flex items-start gap-2">
-      {missingDef || !def ? (
-        <span className="italic text-muted-foreground/50 text-xs">No definition yet — click to add.</span>
-      ) : (
-        <span className="text-xs text-muted-foreground leading-relaxed">{def}</span>
-      )}
-      <button
-        onClick={() => { setDraft(def); setEditing(true); }}
-        className="mt-0.5 flex-shrink-0 opacity-0 group-hover/def:opacity-100 transition-opacity rounded p-0.5 hover:bg-primary/10 text-muted-foreground hover:text-primary"
-        aria-label="Edit definition"
-      >
-        <Pencil className="h-3.5 w-3.5" />
-      </button>
-    </div>
-  );
-}
-
-// ─── Main component ───────────────────────────────────────────────────────────
-function Dictionary() {
-  const [rows,    setRows]    = useState<ColRow[]>(defaultRows);
-  const [query,   setQuery]   = useState("");
-  const [filter,  setFilter]  = useState<FilterId>("all");
-
-  // Load from localStorage if a schema was uploaded
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("schema_sense_cols");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setRows(parsed.map((p: any) => ({
-            col: p.name,
-            type: p.type,
-            nullable: p.null !== "0%",
-            pii: false,
-            missingDef: true,
-            def: "",
-            lineage: ["raw.upload", "stg_dynamic"],
-          })));
-        }
-      }
-    } catch (_) {}
-  }, []);
-
-  const saveDefinition = (col: string, def: string) => {
-    setRows((prev) => prev.map((r) => r.col === col ? { ...r, def, missingDef: !def } : r));
-  };
-
-  // Apply filter + search
-  const visible = rows.filter((r) => {
-    const matchSearch = !query || r.col.toLowerCase().includes(query.toLowerCase()) || r.def.toLowerCase().includes(query.toLowerCase());
-    const matchFilter =
-      filter === "all"     ? true :
-      filter === "missing" ? r.missingDef || !r.def :
-      filter === "pii"     ? r.pii : true;
-    return matchSearch && matchFilter;
+  // Filter columns based on search query
+  const filteredColumns = columns.filter((col) => {
+    const term = query.toLowerCase();
+    const meta = metadata[col.name];
+    const matchName = col.name.toLowerCase().includes(term);
+    const matchDesc = meta?.description?.toLowerCase().includes(term);
+    const matchMeaning = meta?.meaning?.toLowerCase().includes(term);
+    return matchName || matchDesc || matchMeaning;
   });
 
-  const missingCount = rows.filter((r) => r.missingDef || !r.def).length;
-  const piiCount     = rows.filter((r) => r.pii).length;
-
   return (
-    <div>
-      <SectionTitle
-        kicker="Step 02 / Dictionary"
-        title={<>Every column, <span className="text-primary">defined.</span></>}
-        sub="AI-written definitions, types, nullability, and lineage tags for every field — editable in place."
-      />
+    <div className="space-y-8">
+      {/* Page Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        <div>
+          <SectionTitle
+            kicker={`Data Dictionary · ${activeDataset}`}
+            title={<>Data <span className="text-primary">Dictionary.</span></>}
+            sub="Browse catalog attributes, database types, business definitions, and data compliance metadata."
+          />
+        </div>
 
-      {/* ── Search + filter bar ── */}
-      <div className="mb-4 flex flex-col gap-3">
-        <div className="flex items-center gap-2 rounded-full border border-border/60 bg-card/60 px-4 py-2.5 backdrop-blur">
-          <Search className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+        {/* Generate / Action Button */}
+        <div className="flex-shrink-0 self-start md:self-center">
+          <button
+            onClick={handleOpenGenerationModal}
+            disabled={isGenerating}
+            className="group flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground glow-lime transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 cursor-pointer shadow-lg shadow-primary/20"
+          >
+            <Layers className="h-4 w-4" />
+            {isGenerating ? "Generating..." : isGenerated ? "Regenerate Metadata" : "Generate Metadata"}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Top Metrics Summary Scorecard Grid ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <GlassCard className="p-4 flex flex-col justify-between min-h-[90px] border-border/40 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-primary/20" />
+          <span className="text-[9px] font-mono-tight text-muted-foreground uppercase tracking-widest block mb-2">
+            Metadata Coverage
+          </span>
+          <span className="font-display text-2xl font-bold text-foreground">
+            {isGenerated ? "100.0%" : "0.0%"}
+          </span>
+        </GlassCard>
+        
+        <GlassCard className="p-4 flex flex-col justify-between min-h-[90px] border-border/40 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-primary/20" />
+          <span className="text-[9px] font-mono-tight text-muted-foreground uppercase tracking-widest block mb-2">
+            Total Columns Mapped
+          </span>
+          <span className="font-display text-2xl font-bold text-foreground">
+            {columns.length}
+          </span>
+        </GlassCard>
+
+        <GlassCard className="p-4 flex flex-col justify-between min-h-[90px] border-border/40 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-primary/20" />
+          <span className="text-[9px] font-mono-tight text-muted-foreground uppercase tracking-widest block mb-2">
+            Governance Audit
+          </span>
+          <span className={`font-display text-sm font-bold flex items-center gap-1.5 ${isGenerated ? "text-emerald-500" : "text-amber-500 animate-pulse"}`}>
+            {isGenerated ? (
+              <>
+                <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                <span>100% Audited</span>
+              </>
+            ) : (
+              <>
+                <HelpCircle className="h-4 w-4 text-amber-500" />
+                <span>Pending Audit</span>
+              </>
+            )}
+          </span>
+        </GlassCard>
+      </div>
+
+      {/* Search Bar */}
+      <div>
+        <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-card/60 px-4 py-3.5 backdrop-blur shadow-sm transition-all focus-within:border-primary/30 focus-within:ring-2 focus-within:ring-primary/5">
+          <Search className="h-5 w-5 text-muted-foreground shrink-0" />
           <input
             id="dict-search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-            placeholder="Search columns, types, definitions…"
+            placeholder="Search columns, definitions, business meaning..."
+            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/60 text-foreground"
           />
-          <Pill tone="lime"><Sparkles className="h-3 w-3" /> AI</Pill>
-        </div>
-
-        {/* Filter chips */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <Filter className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-          {FILTERS.map((f) => {
-            const active = filter === f.id;
-            const count  = f.id === "all" ? rows.length : f.id === "missing" ? missingCount : piiCount;
-            return (
-              <button
-                key={f.id}
-                id={`dict-filter-${f.id}`}
-                onClick={() => setFilter(f.id)}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono-tight text-[11px] uppercase tracking-wider transition-all ${
-                  active
-                    ? f.id === "pii"
-                      ? "border-orange-400/60 bg-orange-500/15 text-orange-600"
-                      : "border-primary/40 bg-primary/12 text-primary"
-                    : "border-border bg-secondary/50 text-muted-foreground hover:text-foreground hover:bg-secondary"
-                }`}
-              >
-                {f.id === "pii" && <ShieldAlert className="h-3 w-3" />}
-                {f.label}
-                <span className={`rounded-full px-1.5 py-0.5 text-[9px] ${active ? "bg-primary/20" : "bg-muted"}`}>{count}</span>
-              </button>
-            );
-          })}
         </div>
       </div>
 
-      {/* ── Table ── */}
-      <GlassCard className="overflow-hidden">
-        {/* Header */}
-        <div className="grid grid-cols-12 gap-3 border-b border-border/60 px-5 py-3 font-mono-tight text-[10px] uppercase tracking-wider text-muted-foreground">
-          <div className="col-span-2">Column</div>
-          <div className="col-span-2">Type &amp; Nullability</div>
-          <div className="col-span-1">Tags</div>
-          <div className="col-span-4">AI Definition</div>
-          <div className="col-span-3">Lineage</div>
-        </div>
+      {/* Main Content (Columns Grid/List) */}
+      <div className="space-y-4">
+        {isGenerating ? (
+          // Skeletons during AI generation transition
+          Array.from({ length: 4 }).map((_, i) => <MetadataSkeleton key={i} />)
+        ) : filteredColumns.length === 0 ? (
+          <GlassCard className="py-12 text-center text-sm text-muted-foreground border-border/40">
+            No columns match your search query.
+          </GlassCard>
+        ) : (
+          filteredColumns.map((col) => {
+            const hasMeta = !!metadata[col.name];
+            
+            // Build fallback mock metadata if not generated yet to prevent blank/broken pages
+            const meta = metadata[col.name] || {
+              name: col.name,
+              type: col.type,
+              nullPct: "Pending Inferences...",
+              uniquePct: "Pending Inferences...",
+              description: "AI description is pending audit. Please trigger 'Generate Metadata' to start automated catalog profiling.",
+              meaning: "Business definitions mapping is pending audit.",
+              context: "Usage context logs are pending database metadata profiles.",
+              samples: ["Pending Ingestion"],
+              relations: [],
+              isFk: false,
+              sensitivity: "Low",
+              pii: false,
+              complianceTags: [],
+              confidence: 0, // 0 indicates pending
+            };
 
-        {/* Rows */}
-        <ul>
-          <AnimatePresence initial={false}>
-            {visible.length === 0 ? (
-              <motion.li
-                key="empty"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="py-12 text-center text-sm text-muted-foreground"
-              >
-                No columns match your current filter.
-              </motion.li>
-            ) : (
-              visible.map((r, i) => (
-                <motion.li
-                  key={r.col}
-                  layout
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ delay: i * 0.04, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                  className="grid grid-cols-12 items-start gap-3 border-b border-border/40 px-5 py-4 text-sm transition-colors hover:bg-primary/[0.03]"
-                >
-                  {/* Column name */}
-                  <div className="col-span-2 flex items-center gap-2 font-mono-tight text-xs pt-0.5">
-                    <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary glow-lime" />
-                    <span className="truncate">{r.col}</span>
-                  </div>
+            return (
+              <MetadataCard
+                key={col.name}
+                column={col}
+                meta={meta}
+                isExpanded={!!expandedCols[col.name]}
+                onToggle={() => toggleExpand(col.name)}
+              />
+            );
+          })
+        )}
+      </div>
 
-                  {/* Type + Nullability combined */}
-                  <div className="col-span-2 flex flex-wrap gap-1 pt-0.5">
-                    <span className={`inline-flex items-center rounded-md border px-2 py-0.5 font-mono-tight text-[10px] uppercase tracking-wide ${typeCls(r.type)}`}>
-                      {r.type}
-                    </span>
-                    {!r.nullable && (
-                      <span className="inline-flex items-center rounded-md border border-destructive/30 bg-destructive/10 px-2 py-0.5 font-mono-tight text-[10px] text-destructive uppercase tracking-wide">
-                        Required
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Tags */}
-                  <div className="col-span-1 pt-0.5">
-                    {r.pii && (
-                      <span className="inline-flex items-center gap-1 rounded-md border border-orange-400/40 bg-orange-500/12 px-2 py-0.5 font-mono-tight text-[10px] text-orange-600 uppercase tracking-wide">
-                        <ShieldAlert className="h-2.5 w-2.5" />
-                        PII
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Editable definition */}
-                  <div className="col-span-4">
-                    <DefCell
-                      def={r.def}
-                      missingDef={r.missingDef}
-                      onSave={(v) => saveDefinition(r.col, v)}
-                    />
-                  </div>
-
-                  {/* Lineage */}
-                  <div className="col-span-3 flex flex-wrap gap-1.5 pt-0.5">
-                    {r.lineage.map((l) => (
-                      <span
-                        key={l}
-                        className="font-mono-tight text-[10px] rounded border border-border bg-secondary/60 px-1.5 py-0.5 text-foreground/70"
-                      >
-                        {l}
-                      </span>
-                    ))}
-                  </div>
-                </motion.li>
-              ))
-            )}
-          </AnimatePresence>
-        </ul>
-
-        {/* Footer summary */}
-        <div className="flex items-center justify-between border-t border-border/40 px-5 py-3">
-          <span className="font-mono-tight text-[11px] text-muted-foreground">
-            Showing {visible.length} of {rows.length} columns
-          </span>
-          <div className="flex gap-3 font-mono-tight text-[11px] text-muted-foreground">
-            {missingCount > 0 && (
-              <span className="text-amber-500">{missingCount} missing definition{missingCount > 1 ? "s" : ""}</span>
-            )}
-            {piiCount > 0 && (
-              <span className="text-orange-500">{piiCount} PII field{piiCount > 1 ? "s" : ""}</span>
-            )}
-          </div>
-        </div>
-      </GlassCard>
+      {/* Generation Flow Modal */}
+      <MetadataGenerationModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onComplete={handleGenerationComplete}
+      />
     </div>
   );
 }

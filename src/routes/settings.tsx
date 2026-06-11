@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  Settings2, Bell, Plug, Globe, Moon, Mic, Zap, Activity,
+  Settings2, Bell, Plug, Globe, Moon, Mic, Activity,
   Slack, Database, CheckCircle2, AlertCircle, Loader2, Check,
 } from "lucide-react";
 import { GlassCard, SectionTitle } from "@/components/ui-bits";
@@ -169,18 +169,27 @@ function SettingsPage() {
 
   // General
   const [language, setLanguage]   = useState("en");
-  const [darkMode,  setDarkMode]  = useState(() =>
-    document.documentElement.classList.contains("dark")
-  );
+  const [darkMode,  setDarkMode]  = useState(() => {
+    try {
+      const saved = localStorage.getItem("ss_dark_mode");
+      // Default to dark mode if no preference saved yet
+      return saved === null ? true : saved === "1";
+    } catch { return true; }
+  });
   const [voice, setVoice] = useState(() => {
     try { return localStorage.getItem("ss_voice") === "1"; }
     catch { return false; }
   });
 
-  // Sync dark mode with root class (only when toggle changes, not on first read)
+  // Sync dark mode with root class AND persist to localStorage
   useEffect(() => {
-    if (darkMode) document.documentElement.classList.add("dark");
-    else          document.documentElement.classList.remove("dark");
+    if (darkMode) {
+      document.documentElement.classList.add("dark");
+      try { localStorage.setItem("ss_dark_mode", "1"); } catch {}
+    } else {
+      document.documentElement.classList.remove("dark");
+      try { localStorage.setItem("ss_dark_mode", "0"); } catch {}
+    }
   }, [darkMode]);
 
   // Persist voice preference so Ask AI page can read it
@@ -356,7 +365,7 @@ function SettingsPage() {
                       description="Get notified instantly when high-severity schema drift or null spikes are detected."
                       enabled={criticalAlerts}
                       onChange={setCriticalAlerts}
-                      icon={Zap}
+                      icon={Bell}
                     />
                     <ToggleRow
                       id="toggle-daily-digest"

@@ -1,8 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Database, ArrowRight, X, GitBranch, Table2, Info } from "lucide-react";
+import { Database, ArrowRight, X, GitBranch, Table2, Info, Network } from "lucide-react";
 import { SectionTitle, Pill } from "@/components/ui-bits";
+import { EmptyState } from "@/components/EmptyState";
+import { useWorkspace } from "@/lib/WorkspaceContext";
+import { enableDemoMode } from "@/lib/demoModeService";
 
 export const Route = createFileRoute("/lineage")({
   head: () => ({
@@ -27,7 +30,7 @@ type NodeDef = {
 
 type EdgeDef = { from: string; to: string };
 
-const NODES: NodeDef[] = [
+const DEFAULT_NODES: NodeDef[] = [
   // RAW
   { id: "raw_users",    label: "raw.users",    layer: "raw",     cols: ["id","email","signup_ts","country"],       rowCount: "2.1M" },
   { id: "raw_events",   label: "raw.events",   layer: "raw",     cols: ["user_id","event","ts","payload"],         rowCount: "18.4M" },
@@ -41,7 +44,7 @@ const NODES: NodeDef[] = [
   { id: "fact_sales",   label: "fact_sales",   layer: "mart",    cols: ["order_id","cust_id","revenue_usd","ts"], rowCount: "11.2M" },
 ];
 
-const EDGES: EdgeDef[] = [
+const DEFAULT_EDGES: EdgeDef[] = [
   { from: "raw_users",    to: "stg_customers" },
   { from: "raw_events",   to: "stg_customers" },
   { from: "raw_events",   to: "stg_orders"    },
@@ -74,7 +77,6 @@ function buildLayout(nodes: NodeDef[], canvasW: number) {
 
   LAYER_ORDER.forEach((layer, li) => {
     const group = byLayer[layer];
-    const totalH = group.length * NODE_H + (group.length - 1) * (ROW_GAP - NODE_H);
     const startY = 80; // top padding
     group.forEach((n, ni) => {
       positions[n.id] = {
@@ -82,11 +84,10 @@ function buildLayout(nodes: NodeDef[], canvasW: number) {
         y: startY + ni * ROW_GAP,
       };
     });
-    // store canvas height we need
   });
 
   const allY = Object.values(positions).map((p) => p.y);
-  const canvasH = Math.max(...allY) + NODE_H + 60;
+  const canvasH = allY.length > 0 ? Math.max(...allY) + NODE_H + 60 : 300;
 
   return { positions, colCentres, canvasH };
 }
@@ -115,6 +116,14 @@ function Lineage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [canvasW, setCanvasW] = useState(900);
   const [selected, setSelected] = useState<string | null>(null);
+  
+  const { hasDataset, refreshWorkspace } = useWorkspace();
+  const [isCustomDataset, setIsCustomDataset] = useState(false);
+  const [lineageGenerated, setLineageGenerated] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  
+  const [nodes, setNodes] = useState<NodeDef[]>([]);
+  const [edges, setEdges] = useState<EdgeDef[]>([]);
 
   // Measure container width
   useEffect(() => {
@@ -123,20 +132,108 @@ function Lineage() {
     const ro = new ResizeObserver(([entry]) => setCanvasW(entry.contentRect.width));
     ro.observe(el);
     return () => ro.disconnect();
+  }, [hasDataset, lineageGenerated]);
+
+  // Load configuration from localStorage
+  useEffect(() => {
+    try {
+      const savedCols = localStorage.getItem("schema_sense_cols");
+      if (savedCols) {
+        const parsed = JSON.parse(savedCols);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          
+          // Check if it's a custom dataset (doesn't contain default columns like "signup_ts" or "plan_tier")
+          const hasDefaults = parsed.some((c: any) => c.name === "signup_ts" || c.name === "plan_tier");
+          if (!hasDefaults) {
+            setIsCustomDataset(true);
+            const generatedFlag = localStorage.getItem("schema_sense_lineage_generated");
+            if (generatedFlag === "1") {
+              setLineageGenerated(true);
+              buildCustomLineage(parsed);
+            } else {
+              setLineageGenerated(false);
+            }
+          } else {
+            setIsCustomDataset(false);
+            setLineageGenerated(true);
+            setNodes(DEFAULT_NODES);
+            setEdges(DEFAULT_EDGES);
+          }
+        }
+      }
+    } catch (_) {}
   }, []);
 
-  const { positions, colCentres, canvasH } = buildLayout(NODES, canvasW);
+  // Construct mock tables & nodes from custom columns
+  const buildCustomLineage = (cols: { name: string; type: string }[]) => {
+    const colNames = cols.map((c) => c.name);
+    
+    // Split columns list to mock different transformations
+    const rawCols = colNames;
+    const stgCols = colNames.slice(0, Math.max(2, Math.floor(colNames.length * 0.75)));
+    const martCols = colNames.slice(0, Math.max(1, Math.floor(colNames.length * 0.5)));
+
+    const customNodes: NodeDef[] = [
+      {
+        id: "raw_custom",
+        label: "raw.uploaded_dataset",
+        layer: "raw",
+        cols: rawCols,
+        rowCount: "24.5k",
+      },
+      {
+        id: "stg_custom",
+        label: "stg_uploaded_dataset",
+        layer: "staging",
+        cols: stgCols,
+        rowCount: "24.5k",
+      },
+      {
+        id: "mart_custom",
+        label: "mart_analytics_summary",
+        layer: "mart",
+        cols: martCols,
+        rowCount: "12.2k",
+      },
+    ];
+
+    const customEdges: EdgeDef[] = [
+      { from: "raw_custom", to: "stg_custom" },
+      { from: "stg_custom", to: "mart_custom" },
+    ];
+
+    setNodes(customNodes);
+    setEdges(customEdges);
+  };
+
+  const handleGenerateLineage = () => {
+    setIsGenerating(true);
+    setTimeout(() => {
+      try {
+        const savedCols = localStorage.getItem("schema_sense_cols");
+        if (savedCols) {
+          const parsed = JSON.parse(savedCols);
+          buildCustomLineage(parsed);
+          setLineageGenerated(true);
+          localStorage.setItem("schema_sense_lineage_generated", "1");
+        }
+      } catch (_) {}
+      setIsGenerating(false);
+    }, 1500);
+  };
+
+  const { positions, colCentres, canvasH } = buildLayout(nodes, canvasW);
 
   // Which node ids are connected to selected?
   const connectedIds = useCallback((): Set<string> => {
     if (!selected) return new Set();
     const ids = new Set<string>([selected]);
-    EDGES.forEach((e) => {
+    edges.forEach((e) => {
       if (e.from === selected) ids.add(e.to);
       if (e.to   === selected) ids.add(e.from);
     });
     return ids;
-  }, [selected])();
+  }, [selected, edges])();
 
   const isEdgeHighlighted = (e: EdgeDef) =>
     selected === null ||
@@ -146,7 +243,85 @@ function Lineage() {
   const isNodeHighlighted = (id: string) =>
     selected === null || connectedIds.has(id);
 
-  const selectedNode = NODES.find((n) => n.id === selected);
+  const selectedNode = nodes.find((n) => n.id === selected);
+
+  // 1. Show empty state if no dataset is uploaded
+  if (!hasDataset) {
+    return (
+      <div className="py-12 space-y-8">
+        <SectionTitle
+          kicker="Lineage"
+          title={<>Data <span className="text-primary">flow.</span></>}
+          sub="Interactive node-graph visualising the full data lineage from raw sources to marts."
+        />
+        <div className="mt-8">
+          <EmptyState
+            title="No Dataset Connected"
+            description="Upload a dataset to automatically generate dynamic, node-graph data lineage tracking."
+            features={[
+              "Column-to-column dependency resolution",
+              "Interactive Raw-to-Mart transformation maps",
+              "Downstream dependencies warnings",
+              "Pipeline drift visual diagnostics",
+            ]}
+            onSecondaryAction={() => {
+              enableDemoMode();
+              refreshWorkspace();
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Show empty state if lineage is not available (for custom datasets)
+  if (isCustomDataset && !lineageGenerated && !isGenerating) {
+    return (
+      <div className="py-12 space-y-8">
+        <SectionTitle
+          kicker="Lineage"
+          title={<>Data <span className="text-primary">flow.</span></>}
+          sub="Interactive node-graph visualising the full data lineage from raw sources to marts."
+        />
+        <div className="mt-8">
+          <EmptyState
+            icon={Network}
+            title="No Lineage Generated"
+            description="Profile relationships and map references to generate an interactive data flow diagram."
+            features={[
+              "Generate foreign key inferences",
+              "Resolve source-to-mart connections",
+              "Compute dependencies metrics",
+            ]}
+            primaryActionLabel="Generate Inferences"
+            onPrimaryAction={handleGenerateLineage}
+            onSecondaryAction={() => {
+              enableDemoMode();
+              refreshWorkspace();
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // 3. Show Loading skeleton during lineage mapping
+  if (isGenerating) {
+    return (
+      <div className="py-12">
+        <SectionTitle
+          kicker="Lineage"
+          title={<>Data <span className="text-primary">flow.</span></>}
+          sub="Interactive node-graph visualising the full data lineage from raw sources to marts."
+        />
+        <div className="flex flex-col items-center justify-center py-20 bg-card/25 border border-border/40 rounded-3xl animate-pulse">
+          <Network className="h-10 w-10 text-primary mb-4 animate-spin" style={{ animationDuration: "3s" }} />
+          <h3 className="font-display text-lg font-bold text-foreground">Mapping Data Pipeline...</h3>
+          <p className="mt-2 text-xs text-muted-foreground">Tracing schema references and foreign key lineages.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -158,8 +333,8 @@ function Lineage() {
 
       {/* Stats row */}
       <div className="mb-4 flex flex-wrap gap-2">
-        <Pill tone="muted">{NODES.length} nodes</Pill>
-        <Pill tone="muted">{EDGES.length} edges</Pill>
+        <Pill tone="muted">{nodes.length} nodes</Pill>
+        <Pill tone="muted">{edges.length} edges</Pill>
         <Pill tone="lime">3 layers</Pill>
         {selected && (
           <motion.button
@@ -231,7 +406,7 @@ function Lineage() {
             </filter>
           </defs>
 
-          {EDGES.map((edge, i) => {
+          {edges.map((edge, i) => {
             const src = positions[edge.from];
             const dst = positions[edge.to];
             if (!src || !dst) return null;
@@ -276,7 +451,7 @@ function Lineage() {
         </svg>
 
         {/* Nodes */}
-        {NODES.map((node, i) => {
+        {nodes.map((node, i) => {
           const pos = positions[node.id];
           if (!pos) return null;
           const highlighted = isNodeHighlighted(node.id);
@@ -377,7 +552,7 @@ function Lineage() {
         <div style={{ height: canvasH }} />
       </div>
 
-      {/* ── Detail panel ─────────────────────────────────────────────── */}
+      {/* ── Detail panel ── */}
       <AnimatePresence>
         {selectedNode && (
           <motion.div
@@ -436,17 +611,17 @@ function Lineage() {
                 <div className="mb-2 font-mono-tight text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <ArrowRight className="h-3 w-3 rotate-180" /> Upstream
                 </div>
-                {EDGES.filter((e) => e.to === selectedNode.id).length === 0 ? (
+                {edges.filter((e) => e.to === selectedNode.id).length === 0 ? (
                   <span className="text-xs text-muted-foreground italic">Source table</span>
                 ) : (
-                  EDGES.filter((e) => e.to === selectedNode.id).map((e) => (
+                  edges.filter((e) => e.to === selectedNode.id).map((e) => (
                     <button
                       key={e.from}
                       onClick={() => setSelected(e.from)}
-                      className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+                      className="flex items-center gap-1.5 text-xs text-primary hover:underline text-left"
                     >
                       <GitBranch className="h-3 w-3" />
-                      {NODES.find((n) => n.id === e.from)?.label}
+                      {nodes.find((n) => n.id === e.from)?.label}
                     </button>
                   ))
                 )}
@@ -457,17 +632,17 @@ function Lineage() {
                 <div className="mb-2 font-mono-tight text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <ArrowRight className="h-3 w-3" /> Downstream
                 </div>
-                {EDGES.filter((e) => e.from === selectedNode.id).length === 0 ? (
+                {edges.filter((e) => e.from === selectedNode.id).length === 0 ? (
                   <span className="text-xs text-muted-foreground italic">Terminal node</span>
                 ) : (
-                  EDGES.filter((e) => e.from === selectedNode.id).map((e) => (
+                  edges.filter((e) => e.from === selectedNode.id).map((e) => (
                     <button
                       key={e.to}
                       onClick={() => setSelected(e.to)}
-                      className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+                      className="flex items-center gap-1.5 text-xs text-primary hover:underline text-left"
                     >
                       <GitBranch className="h-3 w-3" />
-                      {NODES.find((n) => n.id === e.to)?.label}
+                      {nodes.find((n) => n.id === e.to)?.label}
                     </button>
                   ))
                 )}

@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { AppShell } from "../components/AppShell";
+import { WorkspaceProvider } from "../lib/WorkspaceContext";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -112,6 +113,24 @@ function RootShell({ children }: { children: ReactNode }) {
     <html lang="en">
       <head>
         <HeadContent />
+        {/* Apply theme BEFORE paint to avoid flash-of-wrong-theme */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function(){
+                try {
+                  var pref = localStorage.getItem('ss_dark_mode');
+                  // Default to dark if no preference saved
+                  if (pref === null || pref === '1') {
+                    document.documentElement.classList.add('dark');
+                  }
+                } catch(e) {
+                  document.documentElement.classList.add('dark');
+                }
+              })();
+            `,
+          }}
+        />
       </head>
       <body>
         {children}
@@ -126,7 +145,9 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AppShell />
+      <WorkspaceProvider>
+        <AppShell />
+      </WorkspaceProvider>
     </QueryClientProvider>
   );
 }
