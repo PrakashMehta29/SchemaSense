@@ -19,7 +19,7 @@ export const Route = createFileRoute("/executive")({
 });
 
 function ExecutiveComponent() {
-  const { hasDataset } = useWorkspace();
+  const { hasDataset, refreshWorkspace } = useWorkspace();
 
   const health = EXECUTIVE_HEALTH_SCORECARD;
   const kpis = EXECUTIVE_KPI_DATA;

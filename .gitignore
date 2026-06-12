@@ -30,3 +30,14 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Databases
+*.db
+*.db.wal
+*.db-*

@@ -19,7 +19,7 @@ export const Route = createFileRoute("/governance")({
 });
 
 function GovernanceComponent() {
-  const { hasDataset } = useWorkspace();
+  const { hasDataset, refreshWorkspace } = useWorkspace();
   const [assets, setAssets] = useState<GovernanceAsset[]>([]);
   const [query, setQuery] = useState("");
   const [selectedTagFilter, setSelectedTagFilter] = useState<string>("All");
@@ -31,8 +31,17 @@ function GovernanceComponent() {
     try {
       // Load or seed governance assets
       const savedGov = localStorage.getItem("schema_sense_governance_assets");
+      let parsedGov = null;
       if (savedGov) {
-        setAssets(JSON.parse(savedGov));
+        try {
+          const parsed = JSON.parse(savedGov);
+          if (Array.isArray(parsed)) {
+            parsedGov = parsed;
+          }
+        } catch (_) {}
+      }
+      if (parsedGov) {
+        setAssets(parsedGov);
       } else {
         setAssets(GOVERNANCE_ASSETS);
         localStorage.setItem("schema_sense_governance_assets", JSON.stringify(GOVERNANCE_ASSETS));
@@ -101,7 +110,7 @@ function GovernanceComponent() {
   };
 
   // Filter & Search mapping
-  const filtered = assets.filter((asset) => {
+  const filtered = (assets || []).filter((asset) => {
     const term = query.toLowerCase();
     const matchSearch = asset.columnName.toLowerCase().includes(term) || asset.riskReason.toLowerCase().includes(term);
     const matchTag = selectedTagFilter === "All" || asset.tags.includes(selectedTagFilter as GovernanceTag);

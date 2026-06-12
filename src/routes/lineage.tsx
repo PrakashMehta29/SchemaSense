@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Database, ArrowRight, X, GitBranch, Table2, Info, Network } from "lucide-react";
 import { SectionTitle, Pill } from "@/components/ui-bits";
@@ -113,6 +113,11 @@ function bezierPath(
 
 // ─── Lineage main component ───────────────────────────────────────────────────
 function Lineage() {
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const [canvasW, setCanvasW] = useState(900);
   const [selected, setSelected] = useState<string | null>(null);
@@ -149,7 +154,14 @@ function Lineage() {
             const generatedFlag = localStorage.getItem("schema_sense_lineage_generated");
             if (generatedFlag === "1") {
               setLineageGenerated(true);
-              buildCustomLineage(parsed);
+              const savedNodes = localStorage.getItem("schema_sense_lineage_nodes");
+              const savedEdges = localStorage.getItem("schema_sense_lineage_edges");
+              if (savedNodes && savedEdges) {
+                setNodes(JSON.parse(savedNodes));
+                setEdges(JSON.parse(savedEdges));
+              } else {
+                buildCustomLineage(parsed);
+              }
             } else {
               setLineageGenerated(false);
             }
@@ -164,7 +176,7 @@ function Lineage() {
     } catch (_) {}
   }, []);
 
-  // Construct mock tables & nodes from custom columns
+  // Construct mock tables & nodes from custom columns (used as secondary fallback)
   const buildCustomLineage = (cols: { name: string; type: string }[]) => {
     const colNames = cols.map((c) => c.name);
     
@@ -208,24 +220,140 @@ function Lineage() {
 
   const handleGenerateLineage = () => {
     setIsGenerating(true);
-    setTimeout(() => {
+
+    const savedCols = localStorage.getItem("schema_sense_cols");
+    let activeCols: any[] = [];
+    if (savedCols) {
       try {
-        const savedCols = localStorage.getItem("schema_sense_cols");
-        if (savedCols) {
-          const parsed = JSON.parse(savedCols);
-          buildCustomLineage(parsed);
-          setLineageGenerated(true);
-          localStorage.setItem("schema_sense_lineage_generated", "1");
+        activeCols = JSON.parse(savedCols);
+      } catch (_) {}
+    }
+
+    const datasetsRaw = localStorage.getItem("schema_sense_datasets");
+    let datasets: any[] = [];
+    if (datasetsRaw) {
+      try {
+        const parsedList = JSON.parse(datasetsRaw);
+        if (Array.isArray(parsedList)) {
+          datasets = parsedList;
         }
       } catch (_) {}
-      setIsGenerating(false);
-    }, 1500);
+    }
+
+    // Fallback if no datasets list, use the active dataset
+    if (datasets.length === 0) {
+      const activeName = localStorage.getItem("schema_sense_active_dataset") || "uploaded_dataset.csv";
+      datasets = [{
+        name: activeName,
+        columns: activeCols,
+        rows: "24.5k"
+      }];
+    }
+
+    const payload = {
+      datasets: datasets.map((d: any) => ({
+        name: d.name,
+        columns: d.columns.map((c: any) => c.name)
+      }))
+    };
+
+    fetch("http://localhost:8000/lineage/build", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload)
+    })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`HTTP error ${res.status}`);
+        }
+        return res.json();
+      })
+      .then((data) => {
+        // Map datasets to NodeDef layer layouts dynamically
+        const customNodes: NodeDef[] = datasets.map((d: any, idx: number) => {
+          let layer: Layer = "raw";
+          const isSource = data.relationships.some((r: any) => r.source === d.name);
+          const isTarget = data.relationships.some((r: any) => r.target === d.name);
+          
+          if (isSource && isTarget) {
+            layer = "staging";
+          } else if (isTarget) {
+            layer = "mart";
+          } else if (isSource) {
+            layer = "raw";
+          } else {
+            const layers: Layer[] = ["raw", "staging", "mart"];
+            layer = layers[idx % 3];
+          }
+
+          return {
+            id: d.name,
+            label: d.name,
+            layer: layer,
+            cols: d.columns.map((c: any) => c.name),
+            rowCount: d.rows || "24.5k",
+          };
+        });
+
+        const customEdges: EdgeDef[] = data.relationships.map((r: any) => ({
+          from: r.source,
+          to: r.target
+        }));
+
+        // If only 1 dataset, keep the beautiful 3-layer view (raw -> staging -> mart) of that dataset
+        let finalNodes = customNodes;
+        let finalEdges = customEdges;
+        
+        if (datasets.length <= 1) {
+          const activeName = datasets[0]?.name || "uploaded_dataset.csv";
+          const colNames = datasets[0]?.columns.map((c: any) => c.name) || [];
+          
+          const rawCols = colNames;
+          const stgCols = colNames.slice(0, Math.max(2, Math.floor(colNames.length * 0.75)));
+          const martCols = colNames.slice(0, Math.max(1, Math.floor(colNames.length * 0.5)));
+
+          finalNodes = [
+            { id: "raw_" + activeName, label: "raw." + activeName.replace(".csv", ""), layer: "raw", cols: rawCols, rowCount: datasets[0]?.rows || "24.5k" },
+            { id: "stg_" + activeName, label: "stg_" + activeName.replace(".csv", ""), layer: "staging", cols: stgCols, rowCount: datasets[0]?.rows || "24.5k" },
+            { id: "mart_" + activeName, label: "mart_" + activeName.replace(".csv", ""), layer: "mart", cols: martCols, rowCount: "12.2k" },
+          ];
+          finalEdges = [
+            { from: "raw_" + activeName, to: "stg_" + activeName },
+            { from: "stg_" + activeName, to: "mart_" + activeName },
+          ];
+        }
+
+        setNodes(finalNodes);
+        setEdges(finalEdges);
+        setLineageGenerated(true);
+        setIsGenerating(false);
+
+        try {
+          localStorage.setItem("schema_sense_lineage_generated", "1");
+          localStorage.setItem("schema_sense_lineage_nodes", JSON.stringify(finalNodes));
+          localStorage.setItem("schema_sense_lineage_edges", JSON.stringify(finalEdges));
+        } catch (_) {}
+      })
+      .catch((err) => {
+        console.error("Backend lineage build failed, falling back to mock lineage:", err);
+        // Fallback local logic if server is offline
+        if (activeCols.length > 0) {
+          buildCustomLineage(activeCols);
+          setLineageGenerated(true);
+          try {
+            localStorage.setItem("schema_sense_lineage_generated", "1");
+          } catch (_) {}
+        }
+        setIsGenerating(false);
+      });
   };
 
   const { positions, colCentres, canvasH } = buildLayout(nodes, canvasW);
 
   // Which node ids are connected to selected?
-  const connectedIds = useCallback((): Set<string> => {
+  const connectedIds = useMemo((): Set<string> => {
     if (!selected) return new Set();
     const ids = new Set<string>([selected]);
     edges.forEach((e) => {
@@ -233,7 +361,7 @@ function Lineage() {
       if (e.to   === selected) ids.add(e.from);
     });
     return ids;
-  }, [selected, edges])();
+  }, [selected, edges]);
 
   const isEdgeHighlighted = (e: EdgeDef) =>
     selected === null ||
@@ -244,6 +372,10 @@ function Lineage() {
     selected === null || connectedIds.has(id);
 
   const selectedNode = nodes.find((n) => n.id === selected);
+
+  if (!isMounted) {
+    return null;
+  }
 
   // 1. Show empty state if no dataset is uploaded
   if (!hasDataset) {

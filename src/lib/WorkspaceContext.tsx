@@ -69,8 +69,16 @@ const WorkspaceContext = createContext<WorkspaceState>(defaultState);
 function readWorkspaceFromStorage(): Omit<WorkspaceState, "refreshWorkspace"> {
   try {
     const colsRaw = localStorage.getItem("schema_sense_cols");
-    const columns: DatasetColumn[] = colsRaw ? JSON.parse(colsRaw) : [];
-    const hasDataset = Array.isArray(columns) && columns.length > 0;
+    let columns: DatasetColumn[] = [];
+    if (colsRaw) {
+      try {
+        const parsedCols = JSON.parse(colsRaw);
+        if (Array.isArray(parsedCols)) {
+          columns = parsedCols;
+        }
+      } catch (_) {}
+    }
+    const hasDataset = columns.length > 0;
 
     const activeDatasetName =
       localStorage.getItem("schema_sense_active_dataset") ?? "";
@@ -79,7 +87,15 @@ function readWorkspaceFromStorage(): Omit<WorkspaceState, "refreshWorkspace"> {
       localStorage.getItem("schema_sense_metadata_generated") === "1";
 
     const metaRaw = localStorage.getItem("schema_sense_dictionary_metadata");
-    const metadata = metaRaw ? JSON.parse(metaRaw) : {};
+    let metadata: Record<string, any> = {};
+    if (metaRaw) {
+      try {
+        const parsedMeta = JSON.parse(metaRaw);
+        if (parsedMeta && typeof parsedMeta === "object" && parsedMeta !== null) {
+          metadata = parsedMeta;
+        }
+      } catch (_) {}
+    }
 
     let piiCount = 0;
     Object.values(metadata).forEach((col: any) => {
@@ -93,9 +109,11 @@ function readWorkspaceFromStorage(): Omit<WorkspaceState, "refreshWorkspace"> {
     if (datasetsRaw && activeDatasetName) {
       try {
         const datasets = JSON.parse(datasetsRaw);
-        const activeDs = datasets.find((d: any) => d.name === activeDatasetName);
-        if (activeDs && activeDs.healthScore) {
-          healthScore = activeDs.healthScore;
+        if (Array.isArray(datasets)) {
+          const activeDs = datasets.find((d: any) => d.name === activeDatasetName);
+          if (activeDs && activeDs.healthScore) {
+            healthScore = activeDs.healthScore;
+          }
         }
       } catch (_) {}
     }
@@ -130,10 +148,15 @@ function readWorkspaceFromStorage(): Omit<WorkspaceState, "refreshWorkspace"> {
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<Omit<WorkspaceState, "refreshWorkspace">>(
-    readWorkspaceFromStorage
+    defaultState
   );
 
   const refreshWorkspace = useCallback(() => {
+    setState(readWorkspaceFromStorage());
+  }, []);
+
+  // Sync workspace state on mount (client-side only) to avoid hydration mismatch
+  useEffect(() => {
     setState(readWorkspaceFromStorage());
   }, []);
 

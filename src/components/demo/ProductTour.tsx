@@ -51,6 +51,16 @@ export function ProductTour() {
     navigate({ to: TOUR_STEPS[0].route });
   };
 
+  useEffect(() => {
+    const handleStartTour = () => {
+      handleStart();
+    };
+    window.addEventListener("start-product-tour", handleStartTour);
+    return () => {
+      window.removeEventListener("start-product-tour", handleStartTour);
+    };
+  }, [navigate]);
+
   const handleNext = () => {
     if (activeStep === null) return;
     const nextStep = activeStep + 1;
@@ -136,17 +146,6 @@ export function ProductTour() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* ── Start Tour trigger button ── */}
-      {activeStep === null && (
-        <button
-          onClick={handleStart}
-          className="flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary px-4 py-2.5 text-xs font-semibold shadow-lg backdrop-blur hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer pointer-events-auto"
-        >
-          <Play className="h-3.5 w-3.5 fill-current" />
-          Start Guided Tour
-        </button>
-      )}
     </div>
   );
 }

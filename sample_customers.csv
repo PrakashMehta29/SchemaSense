@@ -1,0 +1,4 @@
+customer_id,email,phone,salary,signup_date
+usr_101,john.doe@example.com,+15550199,85000,2026-06-01
+usr_102,jane.smith@example.com,+15550200,92000,2026-06-02
+usr_103,bob.johnson@example.com,+15550201,45000,2026-06-03

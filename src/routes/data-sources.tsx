@@ -32,6 +32,7 @@ function DataSourcesPage() {
   // Upload workflow states
   const [isUploading, setIsUploading] = useState(false);
   const [uploadingFileName, setUploadingFileName] = useState("");
+  const [activeFile, setActiveFile] = useState<File | null>(null);
 
   useEffect(() => {
     setDatasets(getDatasets());
@@ -48,6 +49,7 @@ function DataSourcesPage() {
   };
 
   const handleFileIngested = (file: File) => {
+    setActiveFile(file);
     setUploadingFileName(file.name);
     setIsUploading(true);
   };
@@ -62,34 +64,112 @@ function DataSourcesPage() {
   const handleIngestionComplete = () => {
     setIsUploading(false);
     
-    // Build a mock dataset object
-    const newDs: Dataset = {
-      name: uploadingFileName,
-      size: "4.8 MB",
-      uploadDate: new Date().toISOString().split("T")[0],
-      status: "Active",
-      metadataGenerated: false, // Inferences pending
-      healthScore: Math.floor(Math.random() * 10) + 85, // 85 - 95%
-      columns: [
-        { name: "id", type: "uuid", null: "0%" },
-        { name: "name", type: "string", null: "1.2%" },
-        { name: "status", type: "string", null: "0%" },
-        { name: "created_at", type: "timestamp", null: "0%" },
-      ],
-      rows: "250K",
+    // Default columns
+    let inferredColumns = [
+      { name: "id", type: "uuid", null: "0%" },
+      { name: "name", type: "string", null: "1.2%" },
+      { name: "status", type: "string", null: "0%" },
+      { name: "created_at", type: "timestamp", null: "0%" },
+    ];
+
+    const proceed = (cols: typeof inferredColumns) => {
+      const newDs: Dataset = {
+        name: uploadingFileName,
+        size: activeFile
+          ? (activeFile.size > 1024 * 1024
+              ? `${(activeFile.size / (1024 * 1024)).toFixed(1)} MB`
+              : `${(activeFile.size / 1024).toFixed(1)} KB`)
+          : "4.8 MB",
+        uploadDate: new Date().toISOString().split("T")[0],
+        status: "Active",
+        metadataGenerated: false, // Inferences pending
+        healthScore: Math.floor(Math.random() * 10) + 85, // 85 - 95%
+        columns: cols,
+        rows: "250K",
+      };
+
+      const updated = [newDs, ...datasets];
+      saveDatasetsState(updated);
+      
+      // Select this uploaded dataset as active
+      switchDataset(newDs.name);
+      localStorage.setItem("schema_sense_metadata_generated", "0"); // Reset metadata generated flag
+      localStorage.removeItem("schema_sense_dictionary_metadata"); // Reset cached definitions
+
+      // Save overview info for /dataset-overview page
+      try {
+        localStorage.setItem(
+          "schema_sense_last_upload_overview",
+          JSON.stringify({
+            name: newDs.name,
+            rows: newDs.rows || "250K",
+            columns: newDs.columns.length,
+            size: newDs.size,
+            uploadDate: newDs.uploadDate,
+          })
+        );
+      } catch (_) {}
+
+      // Force storage write for workspace context
+      try {
+        localStorage.setItem("schema_sense_cols", JSON.stringify(cols));
+        localStorage.setItem("schema_sense_active_dataset", newDs.name);
+      } catch (_) {}
+
+      refreshWorkspace(); // Propagate new dataset to all routes
+
+      // Navigate to Dataset Overview to review before generating metadata
+      navigate({ to: "/dataset-overview" });
     };
 
-    const updated = [newDs, ...datasets];
-    saveDatasetsState(updated);
-    
-    // Select this uploaded dataset as active
-    switchDataset(newDs.name);
-    localStorage.setItem("schema_sense_metadata_generated", "0"); // Reset metadata generated flag
-    localStorage.removeItem("schema_sense_dictionary_metadata"); // Reset cached definitions
-    refreshWorkspace(); // Propagate new dataset to all routes
+    if (activeFile) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const text = e.target?.result as string;
+          if (text) {
+            let headers: string[] = [];
+            if (activeFile.name.endsWith(".json")) {
+              try {
+                const parsed = JSON.parse(text);
+                const obj = Array.isArray(parsed) ? parsed[0] : parsed;
+                headers = Object.keys(obj);
+              } catch (_) {}
+            } else {
+              // CSV / Text fallback: parse comma-separated header row
+              const firstLine = text.split("\n")[0];
+              headers = firstLine
+                .split(",")
+                .map((h) => h.trim().replace(/^["']|["']$/g, ""));
+            }
 
-    // Automatically navigate to dictionary page to run AI generation
-    navigate({ to: "/dictionary" });
+            if (headers.length > 0) {
+              inferredColumns = headers.map((h) => {
+                let colType = "string";
+                const lower = h.toLowerCase();
+                if (lower.includes("id")) colType = "uuid";
+                else if (lower.includes("date") || lower.includes("ts") || lower.includes("time")) colType = "timestamp";
+                else if (lower.includes("price") || lower.includes("amount") || lower.includes("salary") || lower.includes("revenue")) colType = "decimal(12,2)";
+                else if (lower.includes("status") || lower.includes("type") || lower.includes("role") || lower.includes("tier")) colType = "enum";
+                else if (lower.includes("is_") || lower.includes("has_") || lower.includes("active")) colType = "boolean";
+
+                return {
+                  name: h,
+                  type: colType,
+                  null: `${(Math.random() * 5).toFixed(1)}%`,
+                };
+              });
+            }
+          }
+        } catch (err) {
+          console.error("Failed to parse columns from uploaded file:", err);
+        }
+        proceed(inferredColumns);
+      };
+      reader.readAsText(activeFile.slice(0, 10000));
+    } else {
+      proceed(inferredColumns);
+    }
   };
 
   // Render main layout (always active)

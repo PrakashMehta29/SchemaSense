@@ -7,12 +7,12 @@ interface SuggestedQuestionsProps {
 
 const PROMPTS = [
   {
-    text: "What does customer_ltv mean?",
-    desc: "Inspect customer lifetime value, customer cohort calculations, and definitions.",
+    text: "What does customer_id mean?",
+    desc: "Inspect customer identification definitions, database classifications, and key constraints.",
     icon: FileText,
   },
   {
-    text: "Which datasets contain PII?",
+    text: "Which columns contain PII?",
     desc: "Audit email addresses, contact details, and GDPR security restrictions.",
     icon: ShieldAlert,
   },
@@ -22,20 +22,20 @@ const PROMPTS = [
     icon: Network,
   },
   {
-    text: "Where does revenue_usd come from?",
-    desc: "Trace transactional invoice columns downstream from merchant payment ledgers.",
+    text: "What datasets use revenue_usd?",
+    desc: "Trace transactional invoice and revenue columns downstream from payment ledgers.",
     icon: Database,
   },
   {
-    text: "Which columns are undocumented?",
-    desc: "Identify schema catalog parameters lacking descriptions or AI generation.",
+    text: "What governance risks exist?",
+    desc: "Identify sensitive data leakage risks, security exposure tags, and compliance flags.",
     icon: HelpCircle,
   },
 ];
 
 export function SuggestedQuestions({ onSelect }: SuggestedQuestionsProps) {
   return (
-    <div className="space-y-4 max-w-xl mx-auto">
+    <div className="space-y-4 max-w-xl mx-auto w-full">
       {/* Title */}
       <div className="flex items-center justify-center gap-2 text-[10px] font-mono-tight text-muted-foreground uppercase tracking-widest text-center">
         <MessageSquare className="h-3.5 w-3.5 text-primary" />

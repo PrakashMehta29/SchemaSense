@@ -17,10 +17,11 @@ export interface ThinkingStage {
 }
 
 export const THINKING_STAGES: string[] = [
-  "Retrieving metadata schemas",
-  "Checking lineage relationships",
-  "Evaluating quality constraints",
-  "Synthesizing context explanation",
+  "Analyzing Metadata",
+  "Reviewing Relationships",
+  "Checking Governance",
+  "Generating Response",
+  "Preparing Sources",
 ];
 
 export function determineResponseKey(prompt: string): string {

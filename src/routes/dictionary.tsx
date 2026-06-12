@@ -8,6 +8,9 @@ import { MetadataSkeleton } from "@/components/dictionary/MetadataSkeleton";
 import { useWorkspace } from "@/lib/WorkspaceContext";
 import { enableDemoMode } from "@/lib/demoModeService";
 import { EmptyState } from "@/components/EmptyState";
+import { SmartSamplingBanner } from "@/components/SmartSamplingBanner";
+import { motion, AnimatePresence } from "motion/react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/dictionary")({
   head: () => ({
@@ -260,6 +263,7 @@ function Dictionary() {
   const [metadata, setMetadata] = useState<Record<string, ColMetadata>>({});
   const [isGenerated, setIsGenerated] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationStep, setGenerationStep] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
   const [query, setQuery] = useState("");
@@ -292,40 +296,162 @@ function Dictionary() {
   const handleGenerationComplete = () => {
     setIsModalOpen(false);
     setIsGenerating(true);
+    setGenerationStep(0);
 
-    setTimeout(() => {
-      const newMeta: Record<string, ColMetadata> = { ...metadata };
-      columns.forEach((col) => {
-        const defaults = MOCK_METADATA_DATABASE[col.name];
-        
-        newMeta[col.name] = {
-          name: col.name,
-          type: col.type,
-          nullPct: defaults?.nullPct || "0.0%",
-          uniquePct: defaults?.uniquePct || "80.0%",
-          description: defaults?.description || `AI-inferred description for column '${col.name}' identifying patterns and range bounds.`,
-          meaning: defaults?.meaning || `Business definition mapping column '${col.name}' to core business entities.`,
-          context: defaults?.context || "Used across database queries, lookup transformations, and analytical schemas.",
-          samples: defaults?.samples || ["Value_A", "Value_B"],
-          pattern: defaults?.pattern,
-          relations: defaults?.relations || [],
-          isFk: defaults?.isFk || false,
-          sensitivity: defaults?.sensitivity || "Low",
-          pii: defaults?.pii || false,
-          complianceTags: defaults?.complianceTags || [],
-          confidence: defaults?.confidence || Math.floor(Math.random() * 15) + 82, // range 82 - 97%
-        };
+    const GENERATION_STEPS = [
+      "Analyzing Dataset",
+      "Detecting Data Types",
+      "Generating Definitions",
+      "Mapping Relationships",
+      "Running Governance Scan",
+      "Preparing AI Context",
+    ];
+
+    // Animate through steps
+    let step = 0;
+    const stepInterval = setInterval(() => {
+      step += 1;
+      setGenerationStep(step);
+      if (step >= GENERATION_STEPS.length) {
+        clearInterval(stepInterval);
+      }
+    }, 700);
+
+    // Call the backend governance API
+    fetch("http://localhost:8000/governance/scan", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        columns: columns.map((c) => c.name),
+      }),
+    })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`HTTP error ${res.status}`);
+        }
+        return res.json();
+      })
+      .then((data) => {
+        const scanMap = new Map();
+        if (data && data.results) {
+          data.results.forEach((r: any) => {
+            scanMap.set(r.column, r);
+          });
+        }
+
+        const newMeta: Record<string, ColMetadata> = { ...metadata };
+        columns.forEach((col) => {
+          const defaults = MOCK_METADATA_DATABASE[col.name];
+          const scan = scanMap.get(col.name);
+
+          let sensitivity = defaults?.sensitivity || "Low";
+          if (scan) {
+            const rl = scan.risk_level.toLowerCase();
+            sensitivity = rl.charAt(0).toUpperCase() + rl.slice(1); // Capitalize: Low, Medium, High, Critical
+          }
+
+          let complianceTags = defaults?.complianceTags || [];
+          if (scan && scan.tag && scan.tag !== "PUBLIC") {
+            complianceTags = Array.from(new Set([...complianceTags, scan.tag]));
+          }
+
+          newMeta[col.name] = {
+            name: col.name,
+            type: col.type,
+            nullPct: defaults?.nullPct || "0.0%",
+            uniquePct: defaults?.uniquePct || "80.0%",
+            description: defaults?.description || `AI-inferred description for column '${col.name}' identifying patterns and range bounds.`,
+            meaning: defaults?.meaning || `Business definition mapping column '${col.name}' to core business entities.`,
+            context: defaults?.context || "Used across database queries, lookup transformations, and analytical schemas.",
+            samples: defaults?.samples || ["Value_A", "Value_B"],
+            pattern: defaults?.pattern,
+            relations: defaults?.relations || [],
+            isFk: defaults?.isFk || false,
+            sensitivity: sensitivity,
+            pii: scan ? scan.pii : (defaults?.pii || false),
+            complianceTags: complianceTags,
+            confidence: defaults?.confidence || Math.floor(Math.random() * 15) + 82,
+          };
+        });
+
+        // Also save scan data directly to schema_sense_governance_assets so the Governance page is updated!
+        const govAssets = columns.map((col) => {
+          const scan = scanMap.get(col.name);
+          const defaults = MOCK_METADATA_DATABASE[col.name];
+
+          let sensitivity = defaults?.sensitivity || "Low";
+          if (scan) {
+            const rl = scan.risk_level.toLowerCase();
+            sensitivity = rl.charAt(0).toUpperCase() + rl.slice(1);
+          }
+
+          let tagList = ["Internal"];
+          if (scan && scan.tag && scan.tag !== "PUBLIC") {
+            tagList = [scan.tag];
+          } else if (defaults && defaults.complianceTags && defaults.complianceTags.length > 0) {
+            tagList = defaults.complianceTags;
+          }
+
+          return {
+            columnName: col.name,
+            dataType: col.type,
+            tags: tagList,
+            riskScore: scan ? scan.risk_score : (defaults?.riskScore || 10),
+            riskReason: defaults?.riskReason || `Scanned column ${col.name} with risk classification.`,
+            piiType: scan && scan.pii ? (scan.tag === "PII" ? "Email" : "Government ID") : "None",
+            confidence: defaults?.confidence || Math.floor(Math.random() * 15) + 82,
+          };
+        });
+
+        localStorage.setItem("schema_sense_governance_assets", JSON.stringify(govAssets));
+        setMetadata(newMeta);
+        setIsGenerated(true);
+        setIsGenerating(false);
+        setGenerationStep(0);
+        refreshWorkspace();
+
+        try {
+          localStorage.setItem("schema_sense_metadata_generated", "1");
+          localStorage.setItem("schema_sense_dictionary_metadata", JSON.stringify(newMeta));
+        } catch (_) {}
+      })
+      .catch((err) => {
+        console.error("Backend scan failed, falling back to mock metadata:", err);
+        // Fallback mock logic if server is offline
+        const newMeta: Record<string, ColMetadata> = { ...metadata };
+        columns.forEach((col) => {
+          const defaults = MOCK_METADATA_DATABASE[col.name];
+          newMeta[col.name] = {
+            name: col.name,
+            type: col.type,
+            nullPct: defaults?.nullPct || "0.0%",
+            uniquePct: defaults?.uniquePct || "80.0%",
+            description: defaults?.description || `AI-inferred description for column '${col.name}' identifying patterns and range bounds.`,
+            meaning: defaults?.meaning || `Business definition mapping column '${col.name}' to core business entities.`,
+            context: defaults?.context || "Used across database queries, lookup transformations, and analytical schemas.",
+            samples: defaults?.samples || ["Value_A", "Value_B"],
+            pattern: defaults?.pattern,
+            relations: defaults?.relations || [],
+            isFk: defaults?.isFk || false,
+            sensitivity: defaults?.sensitivity || "Low",
+            pii: defaults?.pii || false,
+            complianceTags: defaults?.complianceTags || [],
+            confidence: defaults?.confidence || Math.floor(Math.random() * 15) + 82,
+          };
+        });
+        setMetadata(newMeta);
+        setIsGenerated(true);
+        setIsGenerating(false);
+        setGenerationStep(0);
+        refreshWorkspace();
+
+        try {
+          localStorage.setItem("schema_sense_metadata_generated", "1");
+          localStorage.setItem("schema_sense_dictionary_metadata", JSON.stringify(newMeta));
+        } catch (_) {}
       });
-
-      setMetadata(newMeta);
-      setIsGenerated(true);
-      setIsGenerating(false);
-
-      try {
-        localStorage.setItem("schema_sense_metadata_generated", "1");
-        localStorage.setItem("schema_sense_dictionary_metadata", JSON.stringify(newMeta));
-      } catch (_) {}
-    }, 1500);
   };
 
   const toggleExpand = (colName: string) => {
@@ -459,8 +585,107 @@ function Dictionary() {
       {/* Main Content (Columns Grid/List) */}
       <div className="space-y-4">
         {isGenerating ? (
-          // Skeletons during AI generation transition
-          Array.from({ length: 4 }).map((_, i) => <MetadataSkeleton key={i} />)
+          // ── Full 6-step animated generation workflow ──
+          <AnimatePresence mode="wait">
+            <motion.div
+              key="generating"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="space-y-6"
+            >
+              {/* Smart Sampling Banner */}
+              <SmartSamplingBanner samplePct={15} estimatedAccuracy={92} />
+
+              {/* 6-step checklist card */}
+              <GlassCard className="p-8 border-primary/20 bg-primary/5 shadow-[0_8px_30px_rgba(242,120,92,0.06)] relative overflow-hidden">
+                {/* Animated top progress bar */}
+                <motion.div
+                  className="absolute top-0 left-0 h-1 bg-gradient-to-r from-primary to-emerald-400 shadow-[0_0_10px_rgba(242,120,92,0.8)]"
+                  initial={{ width: "0%" }}
+                  animate={{ width: `${Math.min(100, (generationStep / 6) * 100)}%` }}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
+                />
+
+                <div className="flex flex-col items-center justify-center text-center space-y-6">
+                  <div className="space-y-1">
+                    <h3 className="font-display text-lg font-bold tracking-tight text-foreground">
+                      Generating AI Metadata
+                    </h3>
+                    <p className="text-[11px] text-muted-foreground">
+                      Analyzing your dataset and building intelligent definitions...
+                    </p>
+                  </div>
+
+                  {/* Step checklist */}
+                  <div className="w-full max-w-sm border border-border/40 bg-background/50 rounded-2xl p-5 text-left space-y-3 shadow-inner">
+                    {[
+                      "Analyzing Dataset",
+                      "Detecting Data Types",
+                      "Generating Definitions",
+                      "Mapping Relationships",
+                      "Running Governance Scan",
+                      "Preparing AI Context",
+                    ].map((stepLabel, idx) => {
+                      const isDone = idx < generationStep;
+                      const isRunning = idx === generationStep;
+                      const isPending = idx > generationStep;
+
+                      return (
+                        <motion.div
+                          key={stepLabel}
+                          initial={{ opacity: 0.4 }}
+                          animate={{ opacity: isDone || isRunning ? 1 : 0.4 }}
+                          className={`flex items-center justify-between text-xs transition-all duration-300 ${
+                            isDone
+                              ? "text-emerald-500 font-medium"
+                              : isRunning
+                              ? "text-primary font-bold"
+                              : "text-muted-foreground/50"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            {isDone ? (
+                              <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                            ) : isRunning ? (
+                              <Loader2 className="h-4 w-4 text-primary animate-spin shrink-0" />
+                            ) : (
+                              <div className="h-4 w-4 rounded-full border border-border bg-secondary/20 shrink-0 flex items-center justify-center text-[9px] font-bold">
+                                {idx + 1}
+                              </div>
+                            )}
+                            <span>{stepLabel}</span>
+                          </div>
+                          <span className="text-[9px] font-mono-tight uppercase tracking-wider">
+                            {isDone ? "Done" : isRunning ? "Running" : "Queue"}
+                          </span>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Progress percentage */}
+                  <div className="w-full max-w-sm space-y-2">
+                    <div className="flex justify-between font-mono-tight text-[10px] uppercase tracking-wider text-muted-foreground">
+                      <span>Progress</span>
+                      <span className="font-bold text-foreground">{Math.round((generationStep / 6) * 100)}%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-border/40 rounded-full overflow-hidden">
+                      <motion.div
+                        className="h-full bg-primary glow-lime"
+                        initial={{ width: "0%" }}
+                        animate={{ width: `${Math.min(100, (generationStep / 6) * 100)}%` }}
+                        transition={{ duration: 0.5, ease: "easeOut" }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </GlassCard>
+
+              {/* Skeletons below the workflow card */}
+              {Array.from({ length: 3 }).map((_, i) => <MetadataSkeleton key={i} />)}
+            </motion.div>
+          </AnimatePresence>
         ) : filteredColumns.length === 0 ? (
           <GlassCard className="py-12 text-center text-sm text-muted-foreground border-border/40">
             No columns match your search query.
@@ -499,6 +724,7 @@ function Dictionary() {
           })
         )}
       </div>
+
 
       {/* Generation Flow Modal */}
       <MetadataGenerationModal

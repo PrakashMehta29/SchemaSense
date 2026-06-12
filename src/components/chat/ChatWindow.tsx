@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Send, Mic, MessageSquare, Loader2, ArrowUpRight } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import { Send, Loader2 } from "lucide-react";
+import { motion } from "motion/react";
 import { SuggestedQuestions } from "./SuggestedQuestions";
 import { ThinkingState } from "./ThinkingState";
 import { AIResponseCard } from "./AIResponseCard";
@@ -8,6 +8,9 @@ import { SourcePanel } from "./SourcePanel";
 import { QuickActionsBar } from "./QuickActionsBar";
 import { simulateAIService, ThinkingStage, MockAIResponse } from "@/lib/chatService";
 import { BrandLogo } from "@/components/BrandLogo";
+import { useChatVoice } from "./ChatVoiceProvider";
+import { VoiceInputButton } from "./VoiceInputButton";
+import { VoiceWaveform } from "./VoiceWaveform";
 
 interface Message {
   id: string;
@@ -31,77 +34,21 @@ export function ChatWindow({ initialMessages = [], onNewMessageSent, onSelectPro
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [recognition, setRecognition] = useState<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const { transcript } = useChatVoice();
+
+  // Sync transcript from Speech-to-Text provider to chat input field
+  useEffect(() => {
+    if (transcript) {
+      setInput(transcript);
+    }
+  }, [transcript]);
 
   useEffect(() => {
     setMessages(initialMessages);
   }, [initialMessages]);
-
-  // Initialize SpeechRecognition
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        const rec = new SpeechRecognition();
-        rec.continuous = false;
-        rec.interimResults = false;
-        rec.lang = "en-US";
-
-        rec.onstart = () => {
-          setIsListening(true);
-        };
-
-        rec.onresult = (event: any) => {
-          const transcript = event.results[0][0].transcript;
-          setInput(transcript);
-        };
-
-        rec.onerror = (event: any) => {
-          console.error("Speech recognition error", event.error);
-          setIsListening(false);
-        };
-
-        rec.onend = () => {
-          setIsListening(false);
-        };
-
-        setRecognition(rec);
-      }
-    }
-  }, []);
-
-  const toggleListening = () => {
-    if (isProcessing) return;
-
-    if (!recognition) {
-      // Fallback typing simulation if SpeechRecognition is not supported / blocked
-      if (isListening) {
-        setIsListening(false);
-      } else {
-        setIsListening(true);
-        const sampleQuestions = [
-          "Which columns are undocumented?",
-          "What does customer_ltv mean?",
-          "Where does revenue_usd come from?",
-        ];
-        const randomQuestion = sampleQuestions[Math.floor(Math.random() * sampleQuestions.length)];
-        setTimeout(() => {
-          setInput(randomQuestion);
-          setIsListening(false);
-        }, 2200);
-      }
-      return;
-    }
-
-    if (isListening) {
-      recognition.stop();
-    } else {
-      recognition.start();
-    }
-  };
 
   // Handle outside prompt triggers (e.g. from insights sidebar)
   useEffect(() => {
@@ -280,6 +227,7 @@ export function ChatWindow({ initialMessages = [], onNewMessageSent, onSelectPro
                             {!isUser && !msg.isStreaming && (
                               <QuickActionsBar
                                 text={msg.text}
+                                messageId={msg.id}
                                 onRegenerate={() => handleRegenerate(userPrompt, msg.id)}
                               />
                             )}
@@ -303,9 +251,9 @@ export function ChatWindow({ initialMessages = [], onNewMessageSent, onSelectPro
           {messages.length > 0 && (
             <div className="flex flex-wrap gap-2 justify-center mb-1.5">
               {[
-                "What does customer_ltv mean?",
-                "Which datasets contain PII?",
-                "Where does revenue_usd come from?",
+                "What does customer_id mean?",
+                "Which columns contain PII?",
+                "Show table relationships.",
               ].map((q) => (
                 <button
                   key={q}
@@ -326,7 +274,7 @@ export function ChatWindow({ initialMessages = [], onNewMessageSent, onSelectPro
             }}
             className="relative flex flex-col gap-2 rounded-2xl border border-border/60 bg-background/80 p-4 transition-all focus-within:border-primary/45 focus-within:ring-2 focus-within:ring-primary/10 shadow-md max-w-3xl w-full mx-auto"
           >
-            {/* Input field (now a textarea or large input for Claude/ChatGPT style!) */}
+            {/* Input field */}
             <textarea
               ref={inputRef as any}
               rows={2}
@@ -338,35 +286,13 @@ export function ChatWindow({ initialMessages = [], onNewMessageSent, onSelectPro
                   send(input);
                 }
               }}
-              placeholder='Ask anything about your data... e.g. "What does customer_ltv mean?"'
+              placeholder='Ask anything about your data... e.g. "What does customer_id mean?"'
               className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/60 text-foreground resize-none pr-12 min-h-[50px] max-h-[160px] pb-6"
               disabled={isProcessing}
             />
 
             {/* Listening Waveform overlay */}
-            {isListening && (
-              <div className="absolute left-4 bottom-4 flex items-center gap-2 bg-red-500/10 border border-red-500/20 text-red-500 rounded-full px-3 py-1 text-[11px] font-mono-tight select-none animate-pulse">
-                <span className="h-2 w-2 rounded-full bg-red-500 animate-ping shrink-0" />
-                <span>Listening... Speak now</span>
-                {/* Bouncing audio waveform */}
-                <div className="flex items-end gap-0.5 h-3 ml-1.5 shrink-0">
-                  {[0.4, 1.0, 0.6, 1.2, 0.5, 0.8].map((val, idx) => (
-                    <motion.div
-                      key={idx}
-                      className="w-[1.5px] bg-red-500 rounded-full"
-                      initial={{ height: "3px" }}
-                      animate={{ height: ["3px", `${val * 10}px`, "3px"] }}
-                      transition={{
-                        duration: 0.8,
-                        repeat: Infinity,
-                        delay: idx * 0.08,
-                        ease: "easeInOut",
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
+            <VoiceWaveform />
 
             {/* Bottom Actions Row */}
             <div className="flex items-center justify-between border-t border-border/20 pt-3 mt-1.5">
@@ -386,27 +312,15 @@ export function ChatWindow({ initialMessages = [], onNewMessageSent, onSelectPro
 
               {/* Right actions: Mic & Send Buttons */}
               <div className="flex items-center gap-2">
-                {/* Mic Button */}
-                <button
-                  type="button"
-                  onClick={toggleListening}
-                  disabled={isProcessing}
-                  className={`flex h-8.5 w-8.5 items-center justify-center rounded-xl border transition-all cursor-pointer ${
-                    isListening
-                      ? "border-red-500/30 bg-red-500/15 text-red-500 shadow-[0_0_12px_rgba(239,68,68,0.2)] animate-pulse"
-                      : "border-border/60 bg-background text-muted-foreground hover:text-foreground hover:bg-secondary"
-                  }`}
-                  title="Voice Input"
-                >
-                  <Mic className="h-4.5 w-4.5" />
-                </button>
+                {/* Voice Input Mic Button */}
+                <VoiceInputButton disabled={isProcessing} />
 
                 {/* Send Button */}
                 <button
                   type="submit"
-                  disabled={!input.trim() || isProcessing || isListening}
-                  className={`flex h-8.5 w-8.5 items-center justify-center rounded-xl transition-all cursor-pointer ${
-                    input.trim() && !isProcessing && !isListening
+                  disabled={!input.trim() || isProcessing}
+                  className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all cursor-pointer ${
+                    input.trim() && !isProcessing
                       ? "bg-primary text-primary-foreground shadow-[0_2px_12px_rgba(242,120,92,0.25)] hover:opacity-95"
                       : "text-muted-foreground/40 bg-secondary/25 cursor-not-allowed border border-transparent"
                   }`}

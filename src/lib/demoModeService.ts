@@ -370,7 +370,13 @@ export const getActiveDatasetName = (): string => {
 export const getDatasets = (): Dataset[] => {
   if (typeof window === "undefined") return [];
   const saved = localStorage.getItem("schema_sense_datasets");
-  return saved ? JSON.parse(saved) : [];
+  if (!saved) return [];
+  try {
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    return [];
+  }
 };
 
 export const switchDataset = (name: string) => {

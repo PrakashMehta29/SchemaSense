@@ -4,7 +4,7 @@ import DataCloud from "./DataCloud";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Upload, BookOpen, MessageSquare, BarChart3,
-  GitBranch, Download, LayoutDashboard, Settings, Activity, Shield, Play, Database
+  GitBranch, Download, LayoutDashboard, Settings, Activity, Shield, Play, Database, Compass
 } from "lucide-react";
 import { BrandLogo } from "./BrandLogo";
 import { CommandPalette } from "./search/CommandPalette";
@@ -25,7 +25,12 @@ const navItems = [
 
 export function AppShell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const demoActive = isDemoModeActive();
+  const [demoActive, setDemoActive] = React.useState(false);
+  
+  React.useEffect(() => {
+    setDemoActive(isDemoModeActive());
+  }, []);
+
   const { hasDataset, metadataGenerated } = useWorkspace();
 
   // Dynamic system activity messages
@@ -129,7 +134,7 @@ export function AppShell() {
       {/* Main */}
       <main className="flex-1 h-full overflow-y-auto relative z-10 bg-transparent flex flex-col">
         {/* Global Dataset Context Bar */}
-        <GlobalContextBar />
+        {pathname !== "/chat" && <GlobalContextBar />}
 
         {/* Mobile top bar */}
         <div className="flex items-center justify-between border-b border-border/60 bg-background/60 px-4 py-3 backdrop-blur md:hidden mb-4">
