@@ -1,0 +1,10 @@
+[2026-06-12 20:07:36] WARNING [schemasense:68] GEMMA_API_KEY is not set. Falling back to local heuristic response.
+[2026-06-12 20:07:36] WARNING [schemasense:14] GEMMA_API_KEY is not set. Gemma service will return empty fallback.
+[2026-06-12 20:07:36] INFO [schemasense:77] Falling back to heuristic metadata generator.
+[2026-06-12 20:07:36] INFO [schemasense:18] Processing upload for 'test.csv', path: C:\Users\admin\AppData\Local\Temp\tmp79cxuup5\uploads\test.csv
+[2026-06-12 20:07:36] INFO [schemasense:38] Dataset 'test.csv' uploaded and profiled. Shape: (2 x 3)
+[2026-06-12 20:08:38] WARNING [schemasense:68] GEMMA_API_KEY is not set. Falling back to local heuristic response.
+[2026-06-12 20:08:38] WARNING [schemasense:14] GEMMA_API_KEY is not set. Gemma service will return empty fallback.
+[2026-06-12 20:08:38] INFO [schemasense:77] Falling back to heuristic metadata generator.
+[2026-06-12 20:08:38] INFO [schemasense:18] Processing upload for 'test.csv', path: C:\Users\admin\AppData\Local\Temp\tmpvofvozqc\uploads\test.csv
+[2026-06-12 20:08:38] INFO [schemasense:38] Dataset 'test.csv' uploaded and profiled. Shape: (2 x 3)
