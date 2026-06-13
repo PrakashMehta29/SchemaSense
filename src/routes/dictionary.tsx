@@ -13,7 +13,8 @@ import {
   getGovernanceCategory, 
   getClassificationLabel, 
   getComplianceNotes, 
-  getSuggestedUsage 
+  getSuggestedUsage,
+  getRichCatalogMetadata
 } from "@/lib/governanceService";
 import { SmartSamplingBanner } from "@/components/SmartSamplingBanner";
 import { motion, AnimatePresence } from "motion/react";
@@ -364,6 +365,8 @@ function Dictionary() {
             complianceTags = Array.from(new Set([...complianceTags, scan.tag]));
           }
 
+          const rich = getRichCatalogMetadata(col.name, col.type);
+
           newMeta[col.name] = {
             name: col.name,
             type: col.type,
@@ -372,7 +375,7 @@ function Dictionary() {
             description: defaults?.description || `AI-inferred description for column '${col.name}' identifying patterns and range bounds.`,
             meaning: defaults?.meaning || `Business definition mapping column '${col.name}' to core business entities.`,
             context: defaults?.context || "Used across database queries, lookup transformations, and analytical schemas.",
-            samples: defaults?.samples || ["Value_A", "Value_B"],
+            samples: rich.samples,
             pattern: defaults?.pattern,
             relations: defaults?.relations || [],
             isFk: defaults?.isFk || false,
@@ -380,6 +383,7 @@ function Dictionary() {
             pii: scan ? scan.pii : (defaults?.pii || false),
             complianceTags: complianceTags,
             confidence: defaults?.confidence || Math.floor(Math.random() * 15) + 82,
+            ...rich,
           };
         });
 
@@ -428,7 +432,7 @@ function Dictionary() {
         // Fallback mock logic if server is offline
         const newMeta: Record<string, ColMetadata> = { ...metadata };
         columns.forEach((col) => {
-          const defaults = MOCK_METADATA_DATABASE[col.name];
+          const rich = getRichCatalogMetadata(col.name, col.type);
           newMeta[col.name] = {
             name: col.name,
             type: col.type,
@@ -437,7 +441,7 @@ function Dictionary() {
             description: defaults?.description || `AI-inferred description for column '${col.name}' identifying patterns and range bounds.`,
             meaning: defaults?.meaning || `Business definition mapping column '${col.name}' to core business entities.`,
             context: defaults?.context || "Used across database queries, lookup transformations, and analytical schemas.",
-            samples: defaults?.samples || ["Value_A", "Value_B"],
+            samples: rich.samples,
             pattern: defaults?.pattern,
             relations: defaults?.relations || [],
             isFk: defaults?.isFk || false,
@@ -445,6 +449,7 @@ function Dictionary() {
             pii: defaults?.pii || false,
             complianceTags: defaults?.complianceTags || [],
             confidence: defaults?.confidence || Math.floor(Math.random() * 15) + 82,
+            ...rich,
           };
         });
         setMetadata(newMeta);
@@ -715,7 +720,23 @@ function Dictionary() {
               sensitivity: "Low",
               pii: false,
               complianceTags: [],
-              confidence: 0, // 0 indicates pending
+              confidence: 0,
+              
+              // Fallback default properties
+              criticality: "Low" as const,
+              aiExplanation: "Metadata scanning is currently pending for this column.",
+              whyItMatters: "Connect your dataset and trigger the scanner to map this field to enterprise metrics.",
+              dataFlowPosition: "Source Field" as const,
+              dataFlowReason: "Pending profiling execution.",
+              businessImpactUsedIn: ["Pending Classification"],
+              businessImpactIfModified: "Pending analysis run.",
+              similarColumns: [],
+              joinCandidates: [],
+              upstreamSources: [],
+              downstreamConsumers: [],
+              impactAssessment: "Pending profiling execution.",
+              metadataCompleteness: 0,
+              relationshipCoverage: 0,
             };
 
             return (

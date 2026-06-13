@@ -1,9 +1,12 @@
 import React from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { ChevronDown, ChevronUp, Brain, ShieldAlert, Network, Braces, Eye, Shield, Tag, Calendar, Database } from "lucide-react";
+import { 
+  ChevronDown, ChevronUp, Brain, ShieldAlert, Network, Braces, 
+  Eye, Shield, Tag, Database, Cpu, AlertTriangle, Activity, 
+  Link, ShieldCheck, CheckCircle2, BarChart3, Briefcase 
+} from "lucide-react";
 import { GlassCard, Pill } from "@/components/ui-bits";
 import { ConfidenceBadge } from "./ConfidenceBadge";
-import { ConfidencePanel } from "./ConfidencePanel";
 
 export interface ColMetadata {
   name: string;
@@ -21,6 +24,22 @@ export interface ColMetadata {
   pii: boolean;
   complianceTags: string[];
   confidence: number;
+  
+  // NEW rich architectural schema metadata
+  criticality: "Critical" | "High" | "Medium" | "Low";
+  aiExplanation: string;
+  whyItMatters: string;
+  dataFlowPosition: "Source Field" | "Transformation Field" | "Lookup Field" | "Reporting Field";
+  dataFlowReason: string;
+  businessImpactUsedIn: string[];
+  businessImpactIfModified: string;
+  similarColumns: string[];
+  joinCandidates: string[];
+  upstreamSources: string[];
+  downstreamConsumers: string[];
+  impactAssessment: string;
+  metadataCompleteness: number;
+  relationshipCoverage: number;
 }
 
 interface MetadataCardProps {
@@ -60,6 +79,18 @@ export function MetadataCard({ column, meta, isExpanded, onToggle }: MetadataCar
           <span className="inline-flex items-center rounded-md border border-primary/20 bg-primary/5 px-2.5 py-0.5 font-mono-tight text-[11px] text-primary lowercase tracking-wide shrink-0">
             {column.type}
           </span>
+          {/* Business Criticality Badge */}
+          <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 font-mono-tight text-[9px] uppercase tracking-wider font-semibold shrink-0 ${
+            meta.criticality === "Critical" 
+              ? "border-red-500/20 bg-red-500/10 text-red-500" 
+              : meta.criticality === "High"
+              ? "border-amber-500/20 bg-amber-500/10 text-amber-500"
+              : meta.criticality === "Medium"
+              ? "border-blue-500/20 bg-blue-500/10 text-blue-400"
+              : "border-border bg-secondary/50 text-muted-foreground"
+          }`}>
+            {meta.criticality}
+          </span>
         </div>
 
         <div className="flex items-center gap-4 shrink-0">
@@ -92,182 +123,334 @@ export function MetadataCard({ column, meta, isExpanded, onToggle }: MetadataCar
           >
             <div className="border-t border-border/40 px-6 py-5 bg-secondary/5 space-y-6">
               
-              {/* SECTION 1: Metadata Stats */}
-              <div>
-                <h4 className="text-[10px] font-mono-tight text-muted-foreground uppercase tracking-widest mb-2.5">
-                  Section 1: Data Profiling
-                </h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="rounded-xl border border-border/30 bg-background/40 p-3.5">
-                    <span className="text-[9px] font-mono-tight text-muted-foreground uppercase tracking-wider block mb-1">
-                      Null Percentage
-                    </span>
-                    <span className="font-display text-xl font-bold text-foreground">{meta.nullPct}</span>
-                  </div>
-                  <div className="rounded-xl border border-border/30 bg-background/40 p-3.5">
-                    <span className="text-[9px] font-mono-tight text-muted-foreground uppercase tracking-wider block mb-1">
-                      Unique Ratio
-                    </span>
-                    <span className="font-display text-xl font-bold text-foreground">{meta.uniquePct}</span>
-                  </div>
-                  <div className="rounded-xl border border-border/30 bg-background/40 p-3.5">
-                    <span className="text-[9px] font-mono-tight text-muted-foreground uppercase tracking-wider block mb-1">
-                      Column Format
-                    </span>
-                    <span className="font-mono-tight text-sm font-bold text-primary truncate block">{column.type}</span>
-                  </div>
-                  <div className="rounded-xl border border-border/30 bg-background/40 p-3.5">
-                    <span className="text-[9px] font-mono-tight text-muted-foreground uppercase tracking-wider block mb-1">
-                      Quality Score
-                    </span>
-                    <span className="font-display text-xl font-bold text-emerald-500">100.0%</span>
-                  </div>
-                </div>
-              </div>
-
-              <hr className="border-border/20" />
-
-              {/* SECTION 2: AI Description */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                <div className="lg:col-span-2 space-y-4">
-                  <div>
-                    <h4 className="font-mono-tight text-[10px] uppercase tracking-widest text-primary font-bold flex items-center gap-1.5 mb-2">
-                      <Brain className="h-3.5 w-3.5" /> AI Description
+              {/* HERO BANNER: Why This Field Matters & Business Criticality */}
+              <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5 relative overflow-hidden shadow-sm">
+                <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-violet-500" />
+                <div className="flex flex-col md:flex-row gap-5 items-start">
+                  <div className="flex-1 space-y-2">
+                    <h4 className="font-mono-tight text-[10px] uppercase tracking-widest text-primary font-bold flex items-center gap-1.5">
+                      <Brain className="h-3.5 w-3.5 animate-pulse" /> Why This Field Matters
                     </h4>
-                    <p className="text-xs text-foreground/90 leading-relaxed bg-background/50 border border-border/30 rounded-xl p-4 shadow-inner">
-                      {meta.description}
+                    <p className="text-xs text-foreground/95 font-semibold leading-relaxed">
+                      "{meta.whyItMatters}"
+                    </p>
+                    <p className="text-[11px] text-muted-foreground leading-normal">
+                      {meta.aiExplanation}
                     </p>
                   </div>
-                  <div>
-                    <h4 className="font-mono-tight text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5 mb-2">
-                      <Eye className="h-3.5 w-3.5" /> Business Meaning
-                    </h4>
-                    <p className="text-xs text-foreground/90 leading-relaxed bg-background/50 border border-border/30 rounded-xl p-4 shadow-inner">
-                      {meta.meaning}
-                    </p>
-                  </div>
-                </div>
-                <div>
-                  <h4 className="font-mono-tight text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5 mb-2">
-                    <Database className="h-3.5 w-3.5" /> Usage Context
-                  </h4>
-                  <p className="text-xs text-foreground/90 leading-relaxed bg-background/50 border border-border/30 rounded-xl p-4 shadow-inner h-[calc(100%-24px)] flex items-center justify-center text-center italic text-muted-foreground/90">
-                    {meta.context}
-                  </p>
-                </div>
-              </div>
-
-              <hr className="border-border/20" />
-
-              {/* SECTION 3: Examples & Pattern Recognition */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <h4 className="font-mono-tight text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5 mb-2.5">
-                    <Braces className="h-3.5 w-3.5" /> Sample Values
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {meta.samples.map((val, idx) => (
-                      <span
-                        key={idx}
-                        className="font-mono-tight text-xs rounded-lg border border-border/50 bg-background/50 px-3 py-1.5 text-foreground/80 shadow-sm"
-                      >
-                        {val}
+                  
+                  <div className="md:w-56 w-full flex flex-col gap-2 rounded-xl border border-border bg-card/60 p-3.5">
+                    <span className="text-[9px] font-mono-tight text-muted-foreground uppercase tracking-widest block">
+                      Business Criticality
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 font-mono-tight text-[10px] uppercase tracking-wider font-bold ${
+                        meta.criticality === "Critical" 
+                          ? "border-red-500/20 bg-red-500/10 text-red-500" 
+                          : meta.criticality === "High"
+                          ? "border-amber-500/20 bg-amber-500/10 text-amber-500"
+                          : meta.criticality === "Medium"
+                          ? "border-blue-500/20 bg-blue-500/10 text-blue-400"
+                          : "border-border bg-secondary/50 text-muted-foreground"
+                      }`}>
+                        {meta.criticality}
                       </span>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <h4 className="font-mono-tight text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5 mb-2.5">
-                    <Tag className="h-3.5 w-3.5" /> Pattern Recognition
-                  </h4>
-                  <div className="rounded-xl border border-border/30 bg-background/40 p-3.5 font-mono text-xs text-muted-foreground leading-relaxed">
-                    <div className="flex items-center justify-between border-b border-border/20 pb-1.5 mb-2">
-                      <span className="text-[10px] text-muted-foreground uppercase">Evaluator Regex Match</span>
-                      <span className="text-emerald-500 font-bold">100% Match</span>
+                      <span className="text-[10px] text-muted-foreground font-mono-tight">
+                        {meta.criticality === "Critical" || meta.criticality === "High" ? "System Core Key" : "General Context"}
+                      </span>
                     </div>
-                    {meta.pattern ? (
-                      <span className="text-primary break-all">{meta.pattern}</span>
-                    ) : (
-                      <span className="italic">No custom regular expression constraints mapped.</span>
-                    )}
                   </div>
                 </div>
               </div>
 
-              <hr className="border-border/20" />
-
-              {/* SECTION 4 & 5: Relationships & Governance */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Relationships */}
-                <div>
-                  <h4 className="font-mono-tight text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5 mb-2.5">
-                    <Network className="h-3.5 w-3.5" /> Relationships
-                  </h4>
-                  <div className="space-y-2">
-                    {meta.relations.map((rel, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center gap-2 font-mono-tight text-xs text-foreground/85 border border-border/20 bg-background/40 px-3 py-2 rounded-lg"
-                      >
-                        <Network className="h-3.5 w-3.5 text-primary shrink-0" />
-                        <span>{rel}</span>
-                        {meta.isFk && (
-                          <span className="ml-auto inline-flex items-center rounded-md border border-primary/20 bg-primary/5 px-2 py-0.5 text-[9px] text-primary uppercase font-semibold">
-                            FK Match
-                          </span>
-                        )}
+              {/* Two-Column Details Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                {/* LEFT COLUMN: Data Flow, Business Impact & Profiling */}
+                <div className="space-y-6">
+                  
+                  {/* Data Profiling Card */}
+                  <div>
+                    <h4 className="text-[10px] font-mono-tight text-muted-foreground uppercase tracking-widest mb-2.5">
+                      Data Profiling & Formats
+                    </h4>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="rounded-xl border border-border/30 bg-background/40 p-3">
+                        <span className="text-[9px] font-mono-tight text-muted-foreground uppercase tracking-wider block mb-1">
+                          Null Ratio
+                        </span>
+                        <span className="font-display text-base font-bold text-foreground">{meta.nullPct}</span>
                       </div>
-                    ))}
-                    {meta.relations.length === 0 && (
-                      <div className="text-xs italic text-muted-foreground">No interschema dependencies detected.</div>
-                    )}
+                      <div className="rounded-xl border border-border/30 bg-background/40 p-3">
+                        <span className="text-[9px] font-mono-tight text-muted-foreground uppercase tracking-wider block mb-1">
+                          Unique Ratio
+                        </span>
+                        <span className="font-display text-base font-bold text-foreground">{meta.uniquePct}</span>
+                      </div>
+                      <div className="rounded-xl border border-border/30 bg-background/40 p-3">
+                        <span className="text-[9px] font-mono-tight text-muted-foreground uppercase tracking-wider block mb-1">
+                          Quality Metric
+                        </span>
+                        <span className="font-display text-base font-bold text-emerald-500">100.0%</span>
+                      </div>
+                    </div>
                   </div>
-                </div>
 
-                {/* Governance & Quality breakdown */}
-                <div className="space-y-4">
+                  {/* Data Flow Position Section */}
                   <div>
                     <h4 className="font-mono-tight text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5 mb-2.5">
-                      <Shield className="h-3.5 w-3.5" /> Governance Security
+                      <Activity className="h-3.5 w-3.5 text-primary" /> Data Flow Position
                     </h4>
-                    <div className="flex flex-wrap gap-2.5">
-                      {/* Sensitivity Badge */}
-                      <span
-                        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono-tight text-[10px] uppercase tracking-wider font-semibold ${getSensitivityColor(
-                          meta.sensitivity
-                        )}`}
-                      >
-                        Sensitivity: {meta.sensitivity}
-                      </span>
+                    <div className="rounded-xl border border-border/30 bg-background/40 p-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono-tight text-xs font-bold text-foreground">
+                          {meta.dataFlowPosition}
+                        </span>
+                        <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded border border-primary/20 bg-primary/5 text-primary">
+                          Pipeline Stage
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        {meta.dataFlowReason}
+                      </p>
+                    </div>
+                  </div>
 
-                      {/* PII Detection */}
-                      <span
-                        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono-tight text-[10px] uppercase tracking-wider font-semibold ${
-                          meta.pii
-                            ? "text-red-500 border-red-500/20 bg-red-500/10 dark:bg-red-500/5"
-                            : "text-muted-foreground border-border bg-secondary/50"
-                        }`}
-                      >
-                        PII Detected: {meta.pii ? "Yes" : "No"}
-                      </span>
+                  {/* Business Impact Section */}
+                  <div>
+                    <h4 className="font-mono-tight text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5 mb-2.5">
+                      <Briefcase className="h-3.5 w-3.5 text-primary" /> Business Impact
+                    </h4>
+                    <div className="rounded-xl border border-border/30 bg-background/40 p-4 space-y-3">
+                      <div>
+                        <span className="text-[9px] font-mono-tight text-muted-foreground uppercase tracking-wider block mb-1">
+                          Used In Business Workflows
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {meta.businessImpactUsedIn.map((workflow, idx) => (
+                            <span key={idx} className="font-mono-tight text-[10px] rounded border border-border bg-secondary/35 px-2 py-0.5 text-foreground">
+                              {workflow}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="border-t border-border/20 pt-2.5">
+                        <span className="text-[9px] font-mono-tight text-amber-500 uppercase tracking-wider block mb-1">
+                          ⚠️ Downstream Modification Risk
+                        </span>
+                        <p className="text-[11px] text-muted-foreground leading-relaxed">
+                          {meta.businessImpactIfModified}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
-                      {/* Compliance Tags */}
-                      {meta.complianceTags.map((tag, idx) => (
+                  {/* Sample values */}
+                  <div>
+                    <h4 className="font-mono-tight text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5 mb-2.5">
+                      <Braces className="h-3.5 w-3.5" /> Smart Sample Values
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {meta.samples.map((val, idx) => (
                         <span
                           key={idx}
-                          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary/80 px-3 py-1 font-mono-tight text-[10px] uppercase tracking-wider text-muted-foreground font-semibold"
+                          className="font-mono-tight text-xs rounded-lg border border-border/50 bg-background/50 px-3 py-1.5 text-foreground/80 shadow-sm"
                         >
-                          Compliance: {tag}
+                          {val}
                         </span>
                       ))}
                     </div>
                   </div>
 
-                  {/* Confidence Breakdown Panel */}
-                  <ConfidencePanel score={meta.confidence} />
                 </div>
-              </div>
 
+                {/* RIGHT COLUMN: Lineage, Governance & Trust */}
+                <div className="space-y-6">
+
+                  {/* Intelligent Relationship Lineage */}
+                  <div>
+                    <h4 className="font-mono-tight text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5 mb-2.5">
+                      <Network className="h-3.5 w-3.5 text-primary" /> Interschema Relationships
+                    </h4>
+                    <div className="rounded-xl border border-border/30 bg-background/40 p-4 space-y-3.5">
+                      {/* Join Candidates */}
+                      {meta.joinCandidates.length > 0 && (
+                        <div>
+                          <span className="text-[9px] font-mono-tight text-muted-foreground uppercase tracking-wider block mb-1">
+                            Join Candidates
+                          </span>
+                          <div className="space-y-1">
+                            {meta.joinCandidates.map((join, idx) => (
+                              <div key={idx} className="font-mono text-[10px] text-primary flex items-center gap-1">
+                                <Link className="h-3 w-3 shrink-0" />
+                                <span>{join}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Upstream / Downstream */}
+                      <div className="grid grid-cols-2 gap-3 border-t border-border/20 pt-2.5">
+                        <div>
+                          <span className="text-[9px] font-mono-tight text-muted-foreground uppercase tracking-wider block mb-1">
+                            Upstream Sources
+                          </span>
+                          <div className="space-y-1">
+                            {meta.upstreamSources.length > 0 ? (
+                              meta.upstreamSources.map((up, idx) => (
+                                <span key={idx} className="font-mono text-[10px] text-foreground block truncate">
+                                  {up}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground italic">None (Source Root)</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div>
+                          <span className="text-[9px] font-mono-tight text-muted-foreground uppercase tracking-wider block mb-1">
+                            Downstream Consumers
+                          </span>
+                          <div className="space-y-1">
+                            {meta.downstreamConsumers.length > 0 ? (
+                              meta.downstreamConsumers.map((down, idx) => (
+                                <span key={idx} className="font-mono text-[10px] text-foreground block truncate">
+                                  {down}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground italic">None (Terminal Asset)</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Similar Columns */}
+                      {meta.similarColumns.length > 0 && (
+                        <div className="border-t border-border/20 pt-2.5">
+                          <span className="text-[9px] font-mono-tight text-muted-foreground uppercase tracking-wider block mb-1">
+                            Similar Columns
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {meta.similarColumns.map((sim, idx) => (
+                              <span key={idx} className="font-mono text-[9px] text-muted-foreground mr-2">
+                                {sim}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Overall Impact statement */}
+                      <div className="border-t border-border/20 pt-2.5">
+                        <span className="text-[9px] font-mono-tight text-muted-foreground uppercase tracking-wider block mb-1">
+                          Change Impact Analysis
+                        </span>
+                        <p className="text-[11px] text-foreground font-semibold leading-relaxed">
+                          {meta.impactAssessment}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Governance Security Section */}
+                  <div>
+                    <h4 className="font-mono-tight text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5 mb-2.5">
+                      <Shield className="h-3.5 w-3.5 text-primary" /> Governance Classification
+                    </h4>
+                    <div className="rounded-xl border border-border/30 bg-background/40 p-4 space-y-3">
+                      <div className="flex flex-wrap gap-2">
+                        {/* Sensitivity Badge */}
+                        <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-mono-tight text-[9px] uppercase tracking-wider font-semibold ${getSensitivityColor(meta.sensitivity)}`}>
+                          Sensitivity: {meta.sensitivity}
+                        </span>
+                        {/* PII Detection */}
+                        <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-mono-tight text-[9px] uppercase tracking-wider font-semibold ${meta.pii ? "text-red-500 border-red-500/20 bg-red-500/10" : "text-muted-foreground border-border bg-secondary/50"}`}>
+                          PII: {meta.pii ? "Yes" : "No"}
+                        </span>
+                        {/* Compliance Tags */}
+                        {meta.complianceTags.map((tag, idx) => (
+                          <span key={idx} className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary/80 px-2.5 py-0.5 font-mono-tight text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                      
+                      {/* Pattern recognition if exists */}
+                      {meta.pattern && (
+                        <div className="border-t border-border/20 pt-2.5">
+                          <span className="text-[9px] font-mono-tight text-muted-foreground uppercase tracking-wider block mb-1">
+                            Pattern Regex Match
+                          </span>
+                          <span className="font-mono text-[10px] text-primary break-all block">
+                            {meta.pattern}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Trust & Quality Section */}
+                  <div>
+                    <h4 className="font-mono-tight text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5 mb-2.5">
+                      <ShieldCheck className="h-3.5 w-3.5 text-primary" /> Trust & Quality Audits
+                    </h4>
+                    <div className="rounded-xl border border-border/30 bg-background/40 p-4 space-y-4 shadow-sm">
+                      {/* AI Confidence */}
+                      <div>
+                        <div className="flex items-center justify-between text-xs font-mono-tight text-muted-foreground uppercase tracking-wider mb-1.5">
+                          <span className="flex items-center gap-1"><Cpu className="h-3 w-3 text-primary" /> AI Confidence</span>
+                          <span className="font-bold text-foreground">{meta.confidence}%</span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-border/40 overflow-hidden relative">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${meta.confidence}%` }}
+                            transition={{ duration: 0.8 }}
+                            className="h-full rounded-full bg-primary glow-lime"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Metadata Completeness */}
+                      <div>
+                        <div className="flex items-center justify-between text-xs font-mono-tight text-muted-foreground uppercase tracking-wider mb-1.5">
+                          <span className="flex items-center gap-1"><BarChart3 className="h-3 w-3 text-violet-400" /> Metadata Completeness</span>
+                          <span className="font-bold text-foreground">{meta.metadataCompleteness}%</span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-border/40 overflow-hidden relative">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${meta.metadataCompleteness}%` }}
+                            transition={{ duration: 0.8, delay: 0.1 }}
+                            className="h-full rounded-full bg-violet-500"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Relationship Coverage */}
+                      <div>
+                        <div className="flex items-center justify-between text-xs font-mono-tight text-muted-foreground uppercase tracking-wider mb-1.5">
+                          <span className="flex items-center gap-1"><Network className="h-3 w-3 text-emerald-400" /> Relationship Coverage</span>
+                          <span className="font-bold text-foreground">{meta.relationshipCoverage}%</span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-border/40 overflow-hidden relative">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${meta.relationshipCoverage}%` }}
+                            transition={{ duration: 0.8, delay: 0.2 }}
+                            className="h-full rounded-full bg-emerald-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
             </div>
           </motion.div>
         )}
