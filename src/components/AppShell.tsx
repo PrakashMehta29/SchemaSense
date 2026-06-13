@@ -4,7 +4,7 @@ import DataCloud from "./DataCloud";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Upload, BookOpen, MessageSquare, BarChart3,
-  GitBranch, Download, LayoutDashboard, Settings, Activity, Shield, Play, Database
+  GitBranch, Download, LayoutDashboard, Settings, Activity, Shield, Play, Database, Mic
 } from "lucide-react";
 import { BrandLogo } from "./BrandLogo";
 import { CommandPalette } from "./search/CommandPalette";
@@ -21,6 +21,7 @@ const navItems = [
   { to: "/quality", label: "Quality", icon: Activity },
   { to: "/governance", label: "Governance", icon: Shield },
   { to: "/executive", label: "Executive", icon: LayoutDashboard },
+  { to: "/talkto-speech", label: "Voice Input", icon: Mic },
 ];
 
 export function AppShell() {
