@@ -35,7 +35,7 @@ const getSpeechRecognition = () => {
   return (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 };
 
-export function DataAssistant() {
+export function TextToSpeechSense() {
   const [state, setState] = useState<VoiceState>("idle");
   const stateRef = useRef<VoiceState>("idle"); 
   const [transcript, setTranscript] = useState("");

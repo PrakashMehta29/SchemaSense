@@ -4,7 +4,7 @@ import DataCloud from "./DataCloud";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Upload, BookOpen, MessageSquare, BarChart3,
-  GitBranch, Download, LayoutDashboard, Settings, Activity, Shield, Play, Database, Mic
+  GitBranch, Download, LayoutDashboard, Settings, Activity, Shield, Play, Database, Mic, Bot
 } from "lucide-react";
 import { BrandLogo } from "./BrandLogo";
 import { CommandPalette } from "./search/CommandPalette";
@@ -14,14 +14,13 @@ import { useWorkspace } from "../lib/WorkspaceContext";
 import { GlobalContextBar } from "./GlobalContextBar";
 
 const navItems = [
-  { to: "/chat", label: "Chat", icon: MessageSquare },
   { to: "/data-sources", label: "Data Sources", icon: Database },
   { to: "/dictionary", label: "Dictionary", icon: BookOpen },
   { to: "/lineage", label: "Lineage", icon: GitBranch },
   { to: "/quality", label: "Quality", icon: Activity },
   { to: "/governance", label: "Governance", icon: Shield },
   { to: "/executive", label: "Executive", icon: LayoutDashboard },
-  { to: "/talkto-speech", label: "Voice Input", icon: Mic },
+  { to: "/talkto-speech", label: "Data Assistant", icon: Bot },
 ];
 
 export function AppShell() {

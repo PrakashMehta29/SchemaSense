@@ -1,22 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SectionTitle } from "@/components/ui-bits";
-import { VoiceInputCard } from "@/components/VoiceInputCard";
+import { LlmSchemaSense } from "@/components/LlmSchemaSense";
 
 export const Route = createFileRoute("/talkto-speech")({
-  head: () => ({ meta: [{ title: "Talk to Speech · SchemaSense" }] }),
+  head: () => ({ meta: [{ title: "Data Assistant · SchemaSense" }] }),
   component: TalkToSpeech,
 });
 
 function TalkToSpeech() {
   return (
-    <div>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <SectionTitle
-        kicker="Intelligence"
-        title={<>Talk to <span className="text-primary">Speech.</span></>}
-        sub="Interact with the AI via voice commands."
+        kicker="Interactive Mode"
+        title={<>Data <span className="text-primary">Assistant.</span></>}
+        sub="Interact with your data catalog via voice or text."
       />
       <div className="mt-8">
-        <VoiceInputCard />
+        <LlmSchemaSense />
       </div>
     </div>
   );

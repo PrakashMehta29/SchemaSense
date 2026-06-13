@@ -9,8 +9,10 @@ import { UploadProgress } from "@/components/datasource/UploadProgress";
 import { DatasetCard } from "@/components/datasource/DatasetCard";
 import { ConnectionCard } from "@/components/datasource/ConnectionCard";
 
-import { Dataset, getDatasets, switchDataset, enableDemoMode, CUSTOMERS_COLUMNS } from "@/lib/demoModeService";
+import { Dataset, DatasetColumn, getDatasets, switchDataset, enableDemoMode, CUSTOMERS_COLUMNS } from "@/lib/demoModeService";
+import * as xlsx from "xlsx";
 import { useWorkspace } from "@/lib/WorkspaceContext";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/data-sources")({
   head: () => ({
@@ -32,6 +34,7 @@ function DataSourcesPage() {
   // Upload workflow states
   const [isUploading, setIsUploading] = useState(false);
   const [uploadingFileName, setUploadingFileName] = useState("");
+  const [parsedColumns, setParsedColumns] = useState<DatasetColumn[]>([]);
 
   useEffect(() => {
     setDatasets(getDatasets());
@@ -47,9 +50,91 @@ function DataSourcesPage() {
     } catch (_) {}
   };
 
-  const handleFileIngested = (file: File) => {
+  const handleFileIngested = async (file: File) => {
+    if (!file.name.match(/\.(csv|xlsx|json)$/i)) {
+      toast.error("File not supported", {
+        description: "Only .csv, .xlsx, and .json formats are strictly supported.",
+      });
+      return;
+    }
+
     setUploadingFileName(file.name);
     setIsUploading(true);
+    setParsedColumns([]); // Reset
+
+    try {
+      let extractedCols: any[] = [];
+      
+        let dataSample: any[] = [];
+      if (file.name.endsWith(".xlsx")) {
+        const buffer = await file.arrayBuffer();
+        const workbook = xlsx.read(buffer, { type: "array" });
+        const firstSheetName = workbook.SheetNames[0];
+        if (firstSheetName) {
+          const sheet = workbook.Sheets[firstSheetName];
+          const data = xlsx.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
+          if (data && data.length > 0) {
+            const headers = data[0] || [];
+            extractedCols = headers.filter(Boolean).map((h: any) => ({
+              name: String(h).trim(),
+              type: "string",
+              null: "0%",
+            }));
+            if (data.length > 1) {
+                dataSample = xlsx.utils.sheet_to_json(sheet).slice(0, 5);
+            }
+          }
+        }
+      } else {
+        // Fallback for CSV / JSON via FileReader
+        const text = await file.text();
+        if (file.name.endsWith(".json")) {
+          const data = JSON.parse(text);
+          const firstItem = Array.isArray(data) ? data[0] : data;
+          if (firstItem && typeof firstItem === "object") {
+            extractedCols = Object.keys(firstItem).map((k) => ({
+              name: k,
+              type: typeof firstItem[k] === "number" ? "number" : "string",
+              null: "0%",
+            }));
+            dataSample = (Array.isArray(data) ? data : [data]).slice(0, 5);
+          }
+        } else {
+          // Simple CSV parsing
+          const lines = text.split("\n").filter(Boolean);
+          if (lines.length > 0) {
+            const headers = lines[0].split(",").map((h) => h.trim().replace(/^["']|["']$/g, ""));
+            extractedCols = headers.filter(Boolean).map((h) => ({
+              name: h,
+              type: "string",
+              null: "0%",
+            }));
+            
+            dataSample = lines.slice(1, 6).map(line => {
+                const values = line.split(",").map(v => v.trim().replace(/^["']|["']$/g, ""));
+                let rowObj: any = {};
+                headers.forEach((h, i) => { rowObj[h] = values[i]; });
+                return rowObj;
+            });
+          }
+        }
+      }
+
+      try {
+         localStorage.setItem("schema_sense_dataset_sample", JSON.stringify(dataSample));
+      } catch (e) {}
+
+      if (extractedCols.length > 0) {
+        setParsedColumns(extractedCols);
+      } else {
+        toast.error("The file is not supported or corrupted");
+        setIsUploading(false);
+      }
+    } catch (err) {
+      console.warn("Could not parse file headers", err);
+      toast.error("The file is not supported or corrupted");
+      setIsUploading(false);
+    }
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -62,6 +147,14 @@ function DataSourcesPage() {
   const handleIngestionComplete = () => {
     setIsUploading(false);
     
+    // Use parsed columns or fallback
+    const cols = parsedColumns.length > 0 ? parsedColumns : [
+      { name: "id", type: "uuid", null: "0%" },
+      { name: "name", type: "string", null: "1.2%" },
+      { name: "status", type: "string", null: "0%" },
+      { name: "created_at", type: "timestamp", null: "0%" },
+    ];
+
     // Build a mock dataset object
     const newDs: Dataset = {
       name: uploadingFileName,
@@ -70,12 +163,7 @@ function DataSourcesPage() {
       status: "Active",
       metadataGenerated: false, // Inferences pending
       healthScore: Math.floor(Math.random() * 10) + 85, // 85 - 95%
-      columns: [
-        { name: "id", type: "uuid", null: "0%" },
-        { name: "name", type: "string", null: "1.2%" },
-        { name: "status", type: "string", null: "0%" },
-        { name: "created_at", type: "timestamp", null: "0%" },
-      ],
+      columns: cols,
       rows: "250K",
     };
 

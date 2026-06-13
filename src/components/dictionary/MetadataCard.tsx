@@ -28,9 +28,10 @@ interface MetadataCardProps {
   meta: ColMetadata;
   isExpanded: boolean;
   onToggle: () => void;
+  onUpdateContext?: (newContext: string) => void;
 }
 
-export function MetadataCard({ column, meta, isExpanded, onToggle }: MetadataCardProps) {
+export function MetadataCard({ column, meta, isExpanded, onToggle, onUpdateContext }: MetadataCardProps) {
   
   const getSensitivityColor = (level: string) => {
     switch (level) {
@@ -151,9 +152,12 @@ export function MetadataCard({ column, meta, isExpanded, onToggle }: MetadataCar
                   <h4 className="font-mono-tight text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5 mb-2">
                     <Database className="h-3.5 w-3.5" /> Usage Context
                   </h4>
-                  <p className="text-xs text-foreground/90 leading-relaxed bg-background/50 border border-border/30 rounded-xl p-4 shadow-inner h-[calc(100%-24px)] flex items-center justify-center text-center italic text-muted-foreground/90">
-                    {meta.context}
-                  </p>
+                  <textarea
+                    value={meta.context}
+                    onChange={(e) => onUpdateContext?.(e.target.value)}
+                    placeholder="Add your usage context or tags here... e.g. purchase regularly"
+                    className="w-full text-xs text-foreground/90 leading-relaxed bg-background/50 border border-border/30 rounded-xl p-4 shadow-inner min-h-[80px] h-[calc(100%-24px)] flex items-center justify-center text-center italic text-muted-foreground/90 resize-none outline-none focus:border-primary/50 transition-colors"
+                  />
                 </div>
               </div>
 

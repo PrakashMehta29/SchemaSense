@@ -8,6 +8,9 @@ import { MetadataSkeleton } from "@/components/dictionary/MetadataSkeleton";
 import { useWorkspace } from "@/lib/WorkspaceContext";
 import { enableDemoMode } from "@/lib/demoModeService";
 import { EmptyState } from "@/components/EmptyState";
+import { toast } from "sonner";
+import gsap from "gsap";
+import { GovernanceAsset } from "@/lib/governanceService";
 
 export const Route = createFileRoute("/dictionary")({
   head: () => ({
@@ -286,6 +289,15 @@ function Dictionary() {
 
 
   const handleOpenGenerationModal = () => {
+    if (columns.length === 0) {
+      toast.error("The file is not supported or corrupted");
+      gsap.fromTo(
+        ".generate-btn",
+        { x: -5 },
+        { x: 5, duration: 0.05, yoyo: true, repeat: 5, clearProps: "x" }
+      );
+      return;
+    }
     setIsModalOpen(true);
   };
 
@@ -295,6 +307,8 @@ function Dictionary() {
 
     setTimeout(() => {
       const newMeta: Record<string, ColMetadata> = { ...metadata };
+      const govAssetsToSave: GovernanceAsset[] = [];
+
       columns.forEach((col) => {
         const defaults = MOCK_METADATA_DATABASE[col.name];
         
@@ -315,6 +329,38 @@ function Dictionary() {
           complianceTags: defaults?.complianceTags || [],
           confidence: defaults?.confidence || Math.floor(Math.random() * 15) + 82, // range 82 - 97%
         };
+
+        // Auto-generate basic Governance sync
+        let riskScore = 10;
+        let piiType: any = "None";
+        let tags: any[] = ["Internal"];
+        let riskReason = "Standard data mapping element.";
+
+        const cName = col.name.toLowerCase();
+        if (cName.includes("email")) {
+          riskScore = 92;
+          piiType = "Email";
+          tags = ["PII", "Sensitive"];
+          riskReason = "Contains direct contact identifiers mapping to individual identities.";
+        } else if (cName.includes("id")) {
+          riskScore = 25;
+          tags = ["Internal", "Restricted"];
+          riskReason = "Account key linking mappings.";
+        } else if (cName.includes("revenue") || cName.includes("amount") || cName.includes("price")) {
+          riskScore = 45;
+          tags = ["Financial", "Restricted"];
+          riskReason = "Contains financial or pricing values.";
+        }
+
+        govAssetsToSave.push({
+          columnName: col.name,
+          dataType: col.type,
+          tags: tags,
+          riskScore,
+          riskReason,
+          piiType,
+          confidence: Math.floor(Math.random() * 15) + 82,
+        });
       });
 
       setMetadata(newMeta);
@@ -324,6 +370,7 @@ function Dictionary() {
       try {
         localStorage.setItem("schema_sense_metadata_generated", "1");
         localStorage.setItem("schema_sense_dictionary_metadata", JSON.stringify(newMeta));
+        localStorage.setItem("schema_sense_governance_assets", JSON.stringify(govAssetsToSave));
       } catch (_) {}
     }, 1500);
   };
@@ -333,6 +380,17 @@ function Dictionary() {
       ...prev,
       [colName]: !prev[colName],
     }));
+  };
+
+  const handleUpdateContext = (colName: string, newContext: string) => {
+    const updatedMeta = { ...metadata };
+    if (updatedMeta[colName]) {
+      updatedMeta[colName].context = newContext;
+      setMetadata(updatedMeta);
+      try {
+        localStorage.setItem("schema_sense_dictionary_metadata", JSON.stringify(updatedMeta));
+      } catch (e) {}
+    }
   };
 
   // 1. Show Redesigned Empty State if no dataset exists
@@ -391,7 +449,7 @@ function Dictionary() {
           <button
             onClick={handleOpenGenerationModal}
             disabled={isGenerating}
-            className="group flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground glow-lime transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 cursor-pointer shadow-lg shadow-primary/20"
+            className="generate-btn group flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground glow-lime transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 cursor-pointer shadow-lg shadow-primary/20"
           >
             <Layers className="h-4 w-4" />
             {isGenerating ? "Generating..." : isGenerated ? "Regenerate Metadata" : "Generate Metadata"}
@@ -494,6 +552,7 @@ function Dictionary() {
                 meta={meta}
                 isExpanded={!!expandedCols[col.name]}
                 onToggle={() => toggleExpand(col.name)}
+                onUpdateContext={(newContext) => handleUpdateContext(col.name, newContext)}
               />
             );
           })

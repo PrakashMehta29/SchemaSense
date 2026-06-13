@@ -35,7 +35,7 @@ const getSpeechRecognition = () => {
   return (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 };
 
-export function DataAssistant() {
+export function LlmSchemaSense() {
   const [state, setState] = useState<VoiceState>("idle");
   const stateRef = useRef<VoiceState>("idle"); 
   const [transcript, setTranscript] = useState("");
@@ -44,6 +44,7 @@ export function DataAssistant() {
   const [selectedLang, setSelectedLang] = useState("en-US");
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [textInput, setTextInput] = useState("");
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -295,29 +296,78 @@ export function DataAssistant() {
     setDuration(0);
   };
 
-  const speakText = (text: string, langCode: string = "en-US") => {
-    if ("speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = langCode;
-      
-      const voices = window.speechSynthesis.getVoices();
-      
-      if (voices.length > 0) {
-        if (langCode.startsWith("en")) {
-          const googleEn = voices.find(v => v.name.includes("Google") && v.lang.startsWith("en"));
-          if (googleEn) utterance.voice = googleEn;
-        } else {
-          const googleLang = voices.find(v => v.name.includes("Google") && v.lang.startsWith(langCode.split('-')[0]));
-          if (googleLang) utterance.voice = googleLang;
-          else {
-            const fallbackVoice = voices.find(v => v.lang.startsWith(langCode.split('-')[0]));
-            if (fallbackVoice) utterance.voice = fallbackVoice;
+  const speakText = async (text: string, langCode: string = "en-US") => {
+    const apiKey = import.meta.env.VITE_LLM_API_KEY;
+
+    // Fallback native TTS
+    const playNativeTTS = () => {
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = langCode;
+        
+        const voices = window.speechSynthesis.getVoices();
+        if (voices.length > 0) {
+          if (langCode.startsWith("en")) {
+            const googleEn = voices.find(v => v.name.includes("Google") && v.lang.startsWith("en"));
+            if (googleEn) utterance.voice = googleEn;
+          } else {
+            const googleLang = voices.find(v => v.name.includes("Google") && v.lang.startsWith(langCode.split('-')[0]));
+            if (googleLang) utterance.voice = googleLang;
+            else {
+              const fallbackVoice = voices.find(v => v.lang.startsWith(langCode.split('-')[0]));
+              if (fallbackVoice) utterance.voice = fallbackVoice;
+            }
           }
         }
+        window.speechSynthesis.speak(utterance);
       }
+    };
+
+    if (!apiKey) {
+      playNativeTTS();
+      return;
+    }
+
+    try {
+      let sarvamLangCode = langCode === "en-US" ? "en-IN" : langCode;
       
-      window.speechSynthesis.speak(utterance);
+      // Auto-detect Devanagari script to force Hindi TTS
+      const hasDevanagari = /[\u0900-\u097F]/.test(text);
+      if (hasDevanagari) {
+        sarvamLangCode = "hi-IN";
+      }
+
+      const res = await fetch("https://api.sarvam.ai/text-to-speech", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "api-subscription-key": apiKey
+        },
+        body: JSON.stringify({
+          text: text,
+          target_language_code: sarvamLangCode,
+          speaker: "meera",
+          pace: 1.0,
+          model: "bulbul:v3"
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error(`TTS API failed: ${res.status}`);
+      }
+
+      const data = await res.json();
+      if (data.audios && data.audios.length > 0) {
+        const audioSrc = "data:audio/wav;base64," + data.audios[0];
+        const audio = new Audio(audioSrc);
+        audio.play();
+      } else {
+        playNativeTTS();
+      }
+    } catch (err) {
+      console.error("Bulbul TTS failed, falling back to native TTS", err);
+      playNativeTTS();
     }
   };
 
@@ -413,7 +463,70 @@ export function DataAssistant() {
     return `I couldn't identify a specific module or column in your query. Please try asking about your dataset, for example: 'What is the risk score for ${exampleCol}?' or 'Show me the definition for ${exampleCol}'.`;
   };
 
-  const handleSend = () => {
+  const callLlmApi = async (query: string, localFallback: () => string): Promise<string> => {
+    const apiKey = import.meta.env.VITE_LLM_API_KEY;
+    if (!apiKey) {
+      console.warn("No LLM API Key found, using local fallback");
+      return localFallback();
+    }
+
+    try {
+      let dictMeta: Record<string, any> = {};
+      let govAssets: any[] = [];
+      let dataSample: any[] = [];
+      try {
+        const dictStr = localStorage.getItem("schema_sense_dictionary_metadata");
+        if (dictStr) dictMeta = JSON.parse(dictStr);
+        const govStr = localStorage.getItem("schema_sense_governance_assets");
+        if (govStr) govAssets = JSON.parse(govStr);
+        const sampleStr = localStorage.getItem("schema_sense_dataset_sample");
+        if (sampleStr) dataSample = JSON.parse(sampleStr);
+      } catch(e) {}
+
+      const systemPrompt = `You are SchemaSense Data Assistant. You help users understand their data dictionary.
+CRITICAL LANGUAGE RULE: 
+- If the user's question is in Hindi (e.g., "mere kitne customer hai", "kya risk hai"), you MUST reply entirely in Hindi.
+- If the user types in Hinglish (Hindi written in English alphabet), you MUST reply in Hinglish or Hindi.
+- If the user asks in English, reply in English.
+Definitions:
+- Lineage: Refers to data origins, transformations, upstream and downstream dependencies.
+- SME: Subject Matter Expert.
+Available columns: ${Object.keys(dictMeta).join(", ")}. 
+Metadata details: ${JSON.stringify(dictMeta)}
+Governance details: ${JSON.stringify(govAssets)}
+Actual Data Sample (First 5 rows): ${JSON.stringify(dataSample)}
+Answer the user's question concisely based on both the schema and the actual data sample provided.`;
+
+      const res = await fetch("https://api.sarvam.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "api-subscription-key": apiKey
+        },
+        body: JSON.stringify({
+          model: "sarvam-30b",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: query }
+          ],
+          temperature: 0.3,
+          max_tokens: 150
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error(`LLM API failed with status ${res.status}`);
+      }
+
+      const data = await res.json();
+      return data.choices[0].message.content;
+    } catch (err) {
+      console.error("LLM API Error, falling back to local NLP", err);
+      return localFallback();
+    }
+  };
+
+  const handleSend = async () => {
     stopRecording();
     setState("sent");
     
@@ -421,7 +534,9 @@ export function DataAssistant() {
     
     // Generate AI response via our local query engine
     const query = transcript || "No speech detected";
-    const responseText = processQuery(query);
+    setAiResponse(""); // Clear for thinking UI
+
+    const responseText = await callLlmApi(query, () => processQuery(query));
     
     setAiResponse(responseText);
     speakText(responseText, selectedOption.code);
@@ -437,12 +552,14 @@ export function DataAssistant() {
     ]);
   };
 
-  const handleDirectQuery = (queryText: string) => {
+  const handleDirectQuery = async (queryText: string) => {
     const selectedOption = LANGUAGE_OPTIONS.find(opt => opt.code === selectedLang) || LANGUAGE_OPTIONS[0];
-    const responseText = processQuery(queryText);
-    
     setTranscript(queryText);
     setState("sent");
+    setAiResponse("");
+
+    const responseText = await callLlmApi(queryText, () => processQuery(queryText));
+    
     setAiResponse(responseText);
     speakText(responseText, selectedOption.code);
 
@@ -512,6 +629,33 @@ export function DataAssistant() {
               )) : (
                 <span className="text-xs text-muted-foreground italic">Connect a dataset to see suggestions</span>
               )}
+            </div>
+
+            <div className="w-full max-w-sm mt-8 mb-2 relative">
+              <input
+                type="text"
+                placeholder="Or type your question here..."
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && textInput.trim()) {
+                    handleDirectQuery(textInput.trim());
+                    setTextInput("");
+                  }
+                }}
+                className="w-full bg-secondary/40 border border-border/50 text-sm rounded-full pl-5 pr-12 py-3.5 focus:outline-none focus:ring-2 focus:ring-primary/30 text-foreground"
+              />
+              <button 
+                onClick={() => {
+                  if (textInput.trim()) {
+                    handleDirectQuery(textInput.trim());
+                    setTextInput("");
+                  }
+                }}
+                className="absolute right-1.5 top-1.5 bottom-1.5 w-10 flex items-center justify-center bg-primary text-primary-foreground rounded-full hover:scale-105 transition-transform shadow-md"
+              >
+                <Send className="w-4 h-4 ml-0.5" />
+              </button>
             </div>
           </div>
         )}
