@@ -14,6 +14,7 @@ import { Route as TalktoSpeechRouteImport } from './routes/talkto-speech'
 import { Route as SummaryRouteImport } from './routes/summary'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as QualityRouteImport } from './routes/quality'
+import { Route as ProfilerRouteImport } from './routes/profiler'
 import { Route as MultilingualRouteImport } from './routes/multilingual'
 import { Route as LineageRouteImport } from './routes/lineage'
 import { Route as GovernanceRouteImport } from './routes/governance'
@@ -24,6 +25,7 @@ import { Route as DatasetOverviewRouteImport } from './routes/dataset-overview'
 import { Route as DataSourcesRouteImport } from './routes/data-sources'
 import { Route as ChatRouteImport } from './routes/chat'
 import { Route as AskRouteImport } from './routes/ask'
+import { Route as AnomaliesRouteImport } from './routes/anomalies'
 import { Route as IndexRouteImport } from './routes/index'
 
 const UploadRoute = UploadRouteImport.update({
@@ -49,6 +51,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const QualityRoute = QualityRouteImport.update({
   id: '/quality',
   path: '/quality',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfilerRoute = ProfilerRouteImport.update({
+  id: '/profiler',
+  path: '/profiler',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MultilingualRoute = MultilingualRouteImport.update({
@@ -101,6 +108,11 @@ const AskRoute = AskRouteImport.update({
   path: '/ask',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AnomaliesRoute = AnomaliesRouteImport.update({
+  id: '/anomalies',
+  path: '/anomalies',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -109,6 +121,7 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/anomalies': typeof AnomaliesRoute
   '/ask': typeof AskRoute
   '/chat': typeof ChatRoute
   '/data-sources': typeof DataSourcesRoute
@@ -119,6 +132,7 @@ export interface FileRoutesByFullPath {
   '/governance': typeof GovernanceRoute
   '/lineage': typeof LineageRoute
   '/multilingual': typeof MultilingualRoute
+  '/profiler': typeof ProfilerRoute
   '/quality': typeof QualityRoute
   '/settings': typeof SettingsRoute
   '/summary': typeof SummaryRoute
@@ -127,6 +141,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/anomalies': typeof AnomaliesRoute
   '/ask': typeof AskRoute
   '/chat': typeof ChatRoute
   '/data-sources': typeof DataSourcesRoute
@@ -137,6 +152,7 @@ export interface FileRoutesByTo {
   '/governance': typeof GovernanceRoute
   '/lineage': typeof LineageRoute
   '/multilingual': typeof MultilingualRoute
+  '/profiler': typeof ProfilerRoute
   '/quality': typeof QualityRoute
   '/settings': typeof SettingsRoute
   '/summary': typeof SummaryRoute
@@ -146,6 +162,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/anomalies': typeof AnomaliesRoute
   '/ask': typeof AskRoute
   '/chat': typeof ChatRoute
   '/data-sources': typeof DataSourcesRoute
@@ -156,6 +173,7 @@ export interface FileRoutesById {
   '/governance': typeof GovernanceRoute
   '/lineage': typeof LineageRoute
   '/multilingual': typeof MultilingualRoute
+  '/profiler': typeof ProfilerRoute
   '/quality': typeof QualityRoute
   '/settings': typeof SettingsRoute
   '/summary': typeof SummaryRoute
@@ -166,6 +184,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/anomalies'
     | '/ask'
     | '/chat'
     | '/data-sources'
@@ -176,6 +195,7 @@ export interface FileRouteTypes {
     | '/governance'
     | '/lineage'
     | '/multilingual'
+    | '/profiler'
     | '/quality'
     | '/settings'
     | '/summary'
@@ -184,6 +204,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/anomalies'
     | '/ask'
     | '/chat'
     | '/data-sources'
@@ -194,6 +215,7 @@ export interface FileRouteTypes {
     | '/governance'
     | '/lineage'
     | '/multilingual'
+    | '/profiler'
     | '/quality'
     | '/settings'
     | '/summary'
@@ -202,6 +224,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/anomalies'
     | '/ask'
     | '/chat'
     | '/data-sources'
@@ -212,6 +235,7 @@ export interface FileRouteTypes {
     | '/governance'
     | '/lineage'
     | '/multilingual'
+    | '/profiler'
     | '/quality'
     | '/settings'
     | '/summary'
@@ -221,6 +245,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AnomaliesRoute: typeof AnomaliesRoute
   AskRoute: typeof AskRoute
   ChatRoute: typeof ChatRoute
   DataSourcesRoute: typeof DataSourcesRoute
@@ -231,6 +256,7 @@ export interface RootRouteChildren {
   GovernanceRoute: typeof GovernanceRoute
   LineageRoute: typeof LineageRoute
   MultilingualRoute: typeof MultilingualRoute
+  ProfilerRoute: typeof ProfilerRoute
   QualityRoute: typeof QualityRoute
   SettingsRoute: typeof SettingsRoute
   SummaryRoute: typeof SummaryRoute
@@ -273,6 +299,13 @@ declare module '@tanstack/react-router' {
       path: '/quality'
       fullPath: '/quality'
       preLoaderRoute: typeof QualityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profiler': {
+      id: '/profiler'
+      path: '/profiler'
+      fullPath: '/profiler'
+      preLoaderRoute: typeof ProfilerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/multilingual': {
@@ -345,6 +378,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AskRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/anomalies': {
+      id: '/anomalies'
+      path: '/anomalies'
+      fullPath: '/anomalies'
+      preLoaderRoute: typeof AnomaliesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -357,6 +397,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AnomaliesRoute: AnomaliesRoute,
   AskRoute: AskRoute,
   ChatRoute: ChatRoute,
   DataSourcesRoute: DataSourcesRoute,
@@ -367,6 +408,7 @@ const rootRouteChildren: RootRouteChildren = {
   GovernanceRoute: GovernanceRoute,
   LineageRoute: LineageRoute,
   MultilingualRoute: MultilingualRoute,
+  ProfilerRoute: ProfilerRoute,
   QualityRoute: QualityRoute,
   SettingsRoute: SettingsRoute,
   SummaryRoute: SummaryRoute,
