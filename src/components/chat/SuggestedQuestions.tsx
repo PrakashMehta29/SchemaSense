@@ -1,5 +1,4 @@
-import React from "react";
-import { MessageSquare, FileText, Network, ShieldAlert, Database, HelpCircle } from "lucide-react";
+import { MessageSquare, FileText, ShieldAlert, Database, HelpCircle } from "lucide-react";
 
 interface SuggestedQuestionsProps {
   onSelect: (prompt: string) => void;
@@ -16,11 +15,7 @@ const PROMPTS = [
     desc: "Audit email addresses, contact details, and GDPR security restrictions.",
     icon: ShieldAlert,
   },
-  {
-    text: "Show table relationships.",
-    desc: "Audit the visual lineage nodes mapping raw files to final downstream tables.",
-    icon: Network,
-  },
+
   {
     text: "What datasets use revenue_usd?",
     desc: "Trace transactional invoice and revenue columns downstream from payment ledgers.",

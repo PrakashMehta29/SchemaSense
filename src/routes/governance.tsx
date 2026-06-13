@@ -497,21 +497,6 @@ function GovernanceComponent() {
                                   <div>Logical Subclass: <span className="text-primary font-semibold">{asset.classification}</span></div>
                                 </div>
                               </div>
-
-                              <div>
-                                <h5 className="font-mono-tight text-[9px] uppercase tracking-wider text-muted-foreground mb-1.5">Compliance Notes</h5>
-                                <p className="text-[10px] text-muted-foreground/80 leading-relaxed bg-background/20 p-2.5 rounded border border-border/20">
-                                  {asset.complianceNotes}
-                                </p>
-                              </div>
-
-                              <div>
-                                <h5 className="font-mono-tight text-[9px] uppercase tracking-wider text-muted-foreground mb-1">Downstream Mappings & Custodian</h5>
-                                <div className="space-y-1 text-[10px] text-muted-foreground">
-                                  <div>Asset Owner: <span className="text-foreground">{asset.owner}</span></div>
-                                  <div>Last Scan: <span className="text-foreground">{asset.lastUpdated}</span></div>
-                                </div>
-                              </div>
                             </div>
                           </div>
                         </motion.li>

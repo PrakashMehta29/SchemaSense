@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Copy, RefreshCw, FileText, Network, Check } from "lucide-react";
+import { Copy, RefreshCw, FileText, Check } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { SpeakResponseButton } from "./SpeakResponseButton";
 import { VoicePlaybackControls } from "./VoicePlaybackControls";
@@ -82,22 +82,7 @@ export function QuickActionsBar({
             </Tooltip>
           )}
 
-          {/* Lineage Link */}
-          {hasLineageLink && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link
-                  to="/lineage"
-                  className="p-1.5 rounded-lg border border-transparent text-muted-foreground/75 hover:text-foreground hover:bg-secondary/60 hover:border-border/30 transition-all"
-                >
-                  <Network className="h-3.5 w-3.5" />
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="text-[10px] p-1.5 bg-background border text-foreground">
-                View Lineage Observability Graph
-              </TooltipContent>
-            </Tooltip>
-          )}
+
 
           {/* Speak Response Button */}
           <div className="ml-1 pl-1 border-l border-border/20">

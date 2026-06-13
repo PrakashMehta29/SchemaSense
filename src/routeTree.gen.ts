@@ -15,7 +15,6 @@ import { Route as SummaryRouteImport } from './routes/summary'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as QualityRouteImport } from './routes/quality'
 import { Route as MultilingualRouteImport } from './routes/multilingual'
-import { Route as LineageRouteImport } from './routes/lineage'
 import { Route as GovernanceRouteImport } from './routes/governance'
 import { Route as ExportRouteImport } from './routes/export'
 import { Route as ExecutiveRouteImport } from './routes/executive'
@@ -54,11 +53,6 @@ const QualityRoute = QualityRouteImport.update({
 const MultilingualRoute = MultilingualRouteImport.update({
   id: '/multilingual',
   path: '/multilingual',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LineageRoute = LineageRouteImport.update({
-  id: '/lineage',
-  path: '/lineage',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GovernanceRoute = GovernanceRouteImport.update({
@@ -117,7 +111,6 @@ export interface FileRoutesByFullPath {
   '/executive': typeof ExecutiveRoute
   '/export': typeof ExportRoute
   '/governance': typeof GovernanceRoute
-  '/lineage': typeof LineageRoute
   '/multilingual': typeof MultilingualRoute
   '/quality': typeof QualityRoute
   '/settings': typeof SettingsRoute
@@ -135,7 +128,6 @@ export interface FileRoutesByTo {
   '/executive': typeof ExecutiveRoute
   '/export': typeof ExportRoute
   '/governance': typeof GovernanceRoute
-  '/lineage': typeof LineageRoute
   '/multilingual': typeof MultilingualRoute
   '/quality': typeof QualityRoute
   '/settings': typeof SettingsRoute
@@ -154,7 +146,6 @@ export interface FileRoutesById {
   '/executive': typeof ExecutiveRoute
   '/export': typeof ExportRoute
   '/governance': typeof GovernanceRoute
-  '/lineage': typeof LineageRoute
   '/multilingual': typeof MultilingualRoute
   '/quality': typeof QualityRoute
   '/settings': typeof SettingsRoute
@@ -174,7 +165,6 @@ export interface FileRouteTypes {
     | '/executive'
     | '/export'
     | '/governance'
-    | '/lineage'
     | '/multilingual'
     | '/quality'
     | '/settings'
@@ -192,7 +182,6 @@ export interface FileRouteTypes {
     | '/executive'
     | '/export'
     | '/governance'
-    | '/lineage'
     | '/multilingual'
     | '/quality'
     | '/settings'
@@ -210,7 +199,6 @@ export interface FileRouteTypes {
     | '/executive'
     | '/export'
     | '/governance'
-    | '/lineage'
     | '/multilingual'
     | '/quality'
     | '/settings'
@@ -229,7 +217,6 @@ export interface RootRouteChildren {
   ExecutiveRoute: typeof ExecutiveRoute
   ExportRoute: typeof ExportRoute
   GovernanceRoute: typeof GovernanceRoute
-  LineageRoute: typeof LineageRoute
   MultilingualRoute: typeof MultilingualRoute
   QualityRoute: typeof QualityRoute
   SettingsRoute: typeof SettingsRoute
@@ -280,13 +267,6 @@ declare module '@tanstack/react-router' {
       path: '/multilingual'
       fullPath: '/multilingual'
       preLoaderRoute: typeof MultilingualRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lineage': {
-      id: '/lineage'
-      path: '/lineage'
-      fullPath: '/lineage'
-      preLoaderRoute: typeof LineageRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/governance': {
@@ -365,7 +345,6 @@ const rootRouteChildren: RootRouteChildren = {
   ExecutiveRoute: ExecutiveRoute,
   ExportRoute: ExportRoute,
   GovernanceRoute: GovernanceRoute,
-  LineageRoute: LineageRoute,
   MultilingualRoute: MultilingualRoute,
   QualityRoute: QualityRoute,
   SettingsRoute: SettingsRoute,

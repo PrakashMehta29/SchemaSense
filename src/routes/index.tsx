@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import React, { useEffect, useState } from "react";
 import { isDemoModeActive, enableDemoMode, disableDemoMode } from "../lib/demoModeService";
 import {
-  UploadCloud, Brain, Play, FileSpreadsheet, Database, ShieldAlert, GitBranch, MessageSquare,
+  UploadCloud, Brain, Play, FileSpreadsheet, Database, ShieldAlert, MessageSquare,
   AlertTriangle, CheckCircle, ArrowRight, ShieldCheck, Activity, BarChart3, HelpCircle
 } from "lucide-react";
 import { GlassCard, SectionTitle } from "../components/ui-bits";
@@ -45,18 +45,12 @@ function IndexPage() {
     },
     {
       step: "04",
-      title: "Analyze Lineage",
-      desc: "Visualize node connections mapping raw uploads to downstream marts.",
-      icon: GitBranch,
-    },
-    {
-      step: "05",
       title: "Ask AI Questions",
       desc: "Query tables and metadata in plain language with cited source maps.",
       icon: MessageSquare,
     },
     {
-      step: "06",
+      step: "05",
       title: "Review Governance",
       desc: "Tag PII categories, compute risk indices, and audit compliance metrics.",
       icon: ShieldAlert,
@@ -277,18 +271,7 @@ function IndexPage() {
               </div>
             </div>
 
-            {/* Finding 4 */}
-            <div className="flex items-start gap-3 p-3 rounded-xl border border-emerald-500/15 bg-emerald-500/5 hover:bg-emerald-500/10 transition-colors cursor-pointer" onClick={() => navigate({ to: "/lineage" })}>
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-emerald-500/20 bg-emerald-500/10 text-emerald-500 font-bold text-[10px] mt-0.5">
-                ✓
-              </span>
-              <div className="space-y-0.5">
-                <h4 className="text-xs font-bold text-foreground">Pipeline lineage flow resolved</h4>
-                <p className="text-[10px] text-muted-foreground leading-relaxed">
-                  Resolved complete transformations path mapping raw source endpoints to transactional reporting tables.
-                </p>
-              </div>
-            </div>
+
           </div>
         </GlassCard>
 
@@ -303,7 +286,6 @@ function IndexPage() {
             <div className="flex flex-col gap-2.5">
               {[
                 { label: "Data Dictionary", desc: "Profile schemas & data formats", to: "/dictionary", icon: FileSpreadsheet },
-                { label: "Data Lineage Map", desc: "Trace column-level source-to-mart maps", to: "/lineage", icon: GitBranch },
                 { label: "Governance Center", desc: "Manage PII risk & SOC2 constraints", to: "/governance", icon: ShieldAlert },
                 { label: "Data Sources Registry", desc: "Add CSVs, DBs, or sync warehouses", to: "/data-sources", icon: Database },
               ].map((act, idx) => {
