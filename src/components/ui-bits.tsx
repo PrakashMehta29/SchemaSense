@@ -3,34 +3,40 @@ import { useEffect, useRef, type ReactNode } from "react";
 
 export function SectionTitle({ kicker, title, sub }: { kicker?: string; title: ReactNode; sub?: string }) {
   return (
-    <div className="mb-8">
+    <div className="mb-8 relative overflow-hidden rounded-2xl border glass-panel p-6 md:p-8 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.05)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.15)]">
+      {/* Decorative top highlight */}
+      <div className="absolute top-0 left-0 w-full h-[1px] glass-edge" />
+      
       {kicker && (
-        <div className="mb-2 flex items-center gap-2 font-mono-tight text-[11px] uppercase tracking-[0.2em] text-primary">
-          <span className="h-1.5 w-1.5 rounded-full bg-primary glow-lime" />
+        <div className="mb-3 flex items-center gap-2 font-mono-tight text-[11px] uppercase tracking-[0.2em] text-primary">
+          <span className="h-1.5 w-1.5 rounded-full bg-primary glow-lime shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
           {kicker}
         </div>
       )}
-      <h1 className="font-display text-3xl font-bold leading-tight md:text-5xl">{title}</h1>
-      {sub && <p className="mt-3 max-w-2xl text-sm text-muted-foreground md:text-base">{sub}</p>}
+      <h1 className="font-display text-3xl font-bold leading-tight md:text-4xl text-foreground">{title}</h1>
+      {sub && <p className="mt-3 max-w-2xl text-sm text-muted-foreground leading-relaxed">{sub}</p>}
     </div>
   );
 }
 
-export function GlassCard({ children, className = "" }: { children: ReactNode; className?: string }) {
+export function GlassCard({ children, className = "", style }: { children: ReactNode; className?: string; style?: React.CSSProperties }) {
   return (
-    <div className={`relative rounded-2xl border border-white/5 bg-[#0a0a0a]/40 backdrop-blur-md ${className}`}>
+    <div style={style} className={`relative rounded-2xl border glass-panel-heavy backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.05)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.15)] ${className}`}>
+      <div className="absolute top-0 left-0 w-full h-[1px] glass-edge" />
       {children}
     </div>
   );
 }
 
-export function CountUp({ to, duration = 1.6, suffix = "" }: { to: number; duration?: number; suffix?: string }) {
+export function CountUp({ to, duration = 1.6, suffix = "", decimals }: { to: number; duration?: number; suffix?: string; decimals?: number }) {
   const ref = useRef<HTMLSpanElement | null>(null);
   const inView = useInView(ref, { once: true });
   const mv = useMotionValue(0);
   const rounded = useTransform(mv, (v) => {
-    const n = to >= 100 ? Math.round(v) : Math.round(v * 10) / 10;
-    return n.toLocaleString();
+    const dec = decimals !== undefined ? decimals : (to >= 100 || Number.isInteger(to) ? 0 : 1);
+    const factor = Math.pow(10, dec);
+    const n = dec === 0 ? Math.round(v) : Math.round(v * factor) / factor;
+    return n.toLocaleString(undefined, { minimumFractionDigits: dec, maximumFractionDigits: dec });
   });
   useEffect(() => {
     if (inView) animate(mv, to, { duration, ease: [0.16, 1, 0.3, 1] });
