@@ -3,6 +3,8 @@ import { motion } from "motion/react";
 import { useState, useEffect } from "react";
 import { UploadCloud, FileSpreadsheet, Database, CheckCircle2 } from "lucide-react";
 import { SectionTitle, Pill, GlassCard } from "@/components/ui-bits";
+import { toast } from "sonner";
+import * as XLSX from "xlsx";
 
 export const Route = createFileRoute("/upload")({
   head: () => ({
@@ -39,28 +41,39 @@ function UploadPage() {
 
   const handleUpload = (file?: File) => {
     if (file) {
+      const extension = file.name.split(".").pop()?.toLowerCase();
+      if (extension === "parquet") {
+        toast.error(`.${extension} files are not supported. Please convert your sheet to CSV, Excel, or JSON and try again.`);
+        return;
+      }
       setSelectedFile(file);
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
-          const text = e.target?.result as string;
           let newCols: {name: string, type: string, null: string}[] = [];
-          if (file.name.endsWith('.csv')) {
-            const firstLine = text.split('\n')[0];
-            const headers = firstLine.split(',').map(h => h.trim().replace(/^"|"$/g, '')).filter(h => h);
-            newCols = headers.map(h => ({ name: h, type: "string", null: "0%" }));
-          } else if (file.name.endsWith('.json')) {
-            const json = JSON.parse(text);
-            const firstItem = Array.isArray(json) ? json[0] : json;
-            if (firstItem && typeof firstItem === 'object') {
-              newCols = Object.keys(firstItem).map(k => ({ name: k, type: typeof firstItem[k], null: "0%" }));
+          if (extension === "xlsx" || extension === "xls") {
+            const data = new Uint8Array(e.target?.result as ArrayBuffer);
+            const workbook = XLSX.read(data, { type: "array" });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+            if (rows && rows.length > 0) {
+              const headers = rows[0].map(h => String(h || '').trim()).filter(h => h);
+              newCols = headers.map(h => ({ name: h, type: "string", null: "0%" }));
             }
           } else {
-             newCols = [
-               { name: "id", type: "uuid", null: "0%" },
-               { name: "data", type: "string", null: "0%" },
-               { name: "created_at", type: "timestamp", null: "0%" }
-             ];
+            const text = e.target?.result as string;
+            if (file.name.endsWith('.csv')) {
+              const firstLine = text.split('\n')[0];
+              const headers = firstLine.split(',').map(h => h.trim().replace(/^"|"$/g, '')).filter(h => h);
+              newCols = headers.map(h => ({ name: h, type: "string", null: "0%" }));
+            } else if (file.name.endsWith('.json')) {
+              const json = JSON.parse(text);
+              const firstItem = Array.isArray(json) ? json[0] : json;
+              if (firstItem && typeof firstItem === 'object') {
+                newCols = Object.keys(firstItem).map(k => ({ name: k, type: typeof firstItem[k], null: "0%" }));
+              }
+            }
           }
           if (newCols.length > 0) {
             setColumns(newCols.slice(0, 8));
@@ -68,10 +81,14 @@ function UploadPage() {
             setColumns(defaultColumns);
           }
         } catch (err) {
+          console.error("Failed to parse columns:", err);
           setColumns(defaultColumns);
         }
       };
-      if (file.name.endsWith('.csv')) {
+
+      if (extension === "xlsx" || extension === "xls") {
+        reader.readAsArrayBuffer(file.slice(0, 1024 * 1024 * 5));
+      } else if (file.name.endsWith('.csv')) {
          reader.readAsText(file.slice(0, 1024 * 64));
       } else if (file.size < 5 * 1024 * 1024) {
          reader.readAsText(file);
@@ -103,7 +120,7 @@ function UploadPage() {
       <SectionTitle
         kicker="Step 01 / Upload"
         title={<>Drop your dataset to <span className="text-primary">begin</span>.</>}
-        sub="CSV, Parquet, JSON, or a live warehouse connection. SchemaSense profiles the structure on contact."
+        sub="CSV, JSON, or Excel files. SchemaSense profiles the structure on contact."
       />
 
       <div className="max-w-3xl mx-auto w-full">
@@ -206,7 +223,7 @@ function UploadPage() {
                 type="file" 
                 id="file-upload" 
                 className="hidden" 
-                accept=".csv,.parquet,.json,.xlsx"
+                accept=".csv,.json,.xlsx,.xls"
                 onChange={onFileInput}
               />
               <motion.div
@@ -224,7 +241,6 @@ function UploadPage() {
               <div className="mt-2 text-sm text-muted-foreground">or click to browse · max 5 GB</div>
               <div className="mt-6 flex flex-wrap justify-center gap-2">
                 <Pill tone="muted">.csv</Pill>
-                <Pill tone="muted">.parquet</Pill>
                 <Pill tone="muted">.json</Pill>
                 <Pill tone="muted">.xlsx</Pill>
               </div>

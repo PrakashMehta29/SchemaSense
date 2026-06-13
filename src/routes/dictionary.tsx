@@ -8,6 +8,13 @@ import { MetadataSkeleton } from "@/components/dictionary/MetadataSkeleton";
 import { useWorkspace } from "@/lib/WorkspaceContext";
 import { enableDemoMode } from "@/lib/demoModeService";
 import { EmptyState } from "@/components/EmptyState";
+import { 
+  getBusinessMeaning, 
+  getGovernanceCategory, 
+  getClassificationLabel, 
+  getComplianceNotes, 
+  getSuggestedUsage 
+} from "@/lib/governanceService";
 import { SmartSamplingBanner } from "@/components/SmartSamplingBanner";
 import { motion, AnimatePresence } from "motion/react";
 import { CheckCircle2, Loader2 } from "lucide-react";
@@ -248,7 +255,7 @@ const MOCK_METADATA_DATABASE: Record<string, Omit<ColMetadata, "name" | "type">>
     pattern: "^[0-9]{5}(-[0-9]{4})?$",
     relations: [],
     isFk: false,
-    sensitivity: "Sensitive",
+    sensitivity: "High",
     pii: true,
     complianceTags: ["GDPR", "CCPA"],
     confidence: 91,
@@ -346,10 +353,10 @@ function Dictionary() {
           const defaults = MOCK_METADATA_DATABASE[col.name];
           const scan = scanMap.get(col.name);
 
-          let sensitivity = defaults?.sensitivity || "Low";
+          let sensitivity = (defaults?.sensitivity || "Low") as "Low" | "Medium" | "High" | "Critical";
           if (scan) {
             const rl = scan.risk_level.toLowerCase();
-            sensitivity = rl.charAt(0).toUpperCase() + rl.slice(1); // Capitalize: Low, Medium, High, Critical
+            sensitivity = (rl.charAt(0).toUpperCase() + rl.slice(1)) as "Low" | "Medium" | "High" | "Critical"; // Capitalize: Low, Medium, High, Critical
           }
 
           let complianceTags = defaults?.complianceTags || [];
@@ -381,12 +388,6 @@ function Dictionary() {
           const scan = scanMap.get(col.name);
           const defaults = MOCK_METADATA_DATABASE[col.name];
 
-          let sensitivity = defaults?.sensitivity || "Low";
-          if (scan) {
-            const rl = scan.risk_level.toLowerCase();
-            sensitivity = rl.charAt(0).toUpperCase() + rl.slice(1);
-          }
-
           let tagList = ["Internal"];
           if (scan && scan.tag && scan.tag !== "PUBLIC") {
             tagList = [scan.tag];
@@ -398,10 +399,15 @@ function Dictionary() {
             columnName: col.name,
             dataType: col.type,
             tags: tagList,
-            riskScore: scan ? scan.risk_score : (defaults?.riskScore || 10),
-            riskReason: defaults?.riskReason || `Scanned column ${col.name} with risk classification.`,
+            businessMeaning: getBusinessMeaning(col.name),
+            governanceCategory: getGovernanceCategory(col.name),
+            classification: getClassificationLabel(col.name),
+            complianceNotes: getComplianceNotes(col.name),
+            suggestedUsage: getSuggestedUsage(col.name),
             piiType: scan && scan.pii ? (scan.tag === "PII" ? "Email" : "Government ID") : "None",
             confidence: defaults?.confidence || Math.floor(Math.random() * 15) + 82,
+            owner: defaults?.sensitivity === "Critical" ? "Security Team" : "Data Platform Team",
+            lastUpdated: new Date().toISOString().split("T")[0],
           };
         });
 

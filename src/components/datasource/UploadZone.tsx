@@ -56,7 +56,7 @@ export function UploadZone({ onFileSelected }: UploadZoneProps) {
           type="file"
           ref={fileInputRef}
           className="hidden"
-          accept=".csv,.parquet,.json,.xlsx"
+          accept=".csv,.json,.xlsx,.xls"
           onChange={handleFileChange}
         />
 
@@ -74,7 +74,7 @@ export function UploadZone({ onFileSelected }: UploadZoneProps) {
         </motion.div>
 
         <div className="font-display text-lg font-bold text-foreground">Drag & drop your dataset here</div>
-        <p className="mt-1 text-xs text-muted-foreground">Supported: CSV • XLSX • JSON • Parquet</p>
+        <p className="mt-1 text-xs text-muted-foreground">Supported: CSV • XLSX • JSON</p>
 
         <button className="mt-5 rounded-full bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary px-5 py-2.5 text-xs font-semibold transition-all">
           Browse Files

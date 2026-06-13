@@ -19,9 +19,9 @@ export function SectionTitle({ kicker, title, sub }: { kicker?: string; title: R
   );
 }
 
-export function GlassCard({ children, className = "" }: { children: ReactNode; className?: string }) {
+export function GlassCard({ children, className = "", style }: { children: ReactNode; className?: string; style?: React.CSSProperties }) {
   return (
-    <div className={`relative rounded-2xl border glass-panel-heavy backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.05)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.15)] ${className}`}>
+    <div style={style} className={`relative rounded-2xl border glass-panel-heavy backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.05)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.15)] ${className}`}>
       <div className="absolute top-0 left-0 w-full h-[1px] glass-edge" />
       {children}
     </div>

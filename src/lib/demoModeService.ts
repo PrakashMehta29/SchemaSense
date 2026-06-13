@@ -329,7 +329,7 @@ const DEMO_METADATA = {
     pattern: "^[0-9]{5}(-[0-9]{4})?$",
     relations: [],
     isFk: false,
-    sensitivity: "Sensitive",
+    sensitivity: "High",
     pii: true,
     complianceTags: ["GDPR", "CCPA"],
     confidence: 91,

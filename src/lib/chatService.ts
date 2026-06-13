@@ -1,4 +1,5 @@
 import { MOCK_RESPONSES, MockAIResponse } from "./mockResponses";
+export type { MockAIResponse };
 
 // Keep track of the last column/metric queried in memory for multi-turn context
 let lastMentionedColumn: string | null = null;

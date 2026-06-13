@@ -1,6 +1,5 @@
 import React from "react";
 import { Check, AlertTriangle, Info } from "lucide-react";
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui-bits"; // Or custom tooltips if we want to import Radix tooltips directly
 import { Tooltip as RadixTooltip, TooltipTrigger as RadixTooltipTrigger, TooltipContent as RadixTooltipContent, TooltipProvider as RadixTooltipProvider } from "@/components/ui/tooltip";
 import { motion } from "motion/react";
 

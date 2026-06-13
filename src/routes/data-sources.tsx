@@ -2,6 +2,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import React, { useState, useEffect, useRef } from "react";
 import { Database, Plus } from "lucide-react";
 import { SectionTitle, GlassCard } from "@/components/ui-bits";
+import { toast } from "sonner";
+import * as XLSX from "xlsx";
 
 import { EmptyDatasetState } from "@/components/datasource/EmptyDatasetState";
 import { UploadZone } from "@/components/datasource/UploadZone";
@@ -49,6 +51,11 @@ function DataSourcesPage() {
   };
 
   const handleFileIngested = (file: File) => {
+    const extension = file.name.split(".").pop()?.toLowerCase();
+    if (extension === "parquet") {
+      toast.error(`.${extension} files are not supported. Please convert your sheet to CSV, Excel, or JSON and try again.`);
+      return;
+    }
     setActiveFile(file);
     setUploadingFileName(file.name);
     setIsUploading(true);
@@ -124,49 +131,66 @@ function DataSourcesPage() {
 
     if (activeFile) {
       const reader = new FileReader();
+      const isExcel = activeFile.name.endsWith(".xlsx") || activeFile.name.endsWith(".xls");
       reader.onload = (e) => {
         try {
-          const text = e.target?.result as string;
-          if (text) {
-            let headers: string[] = [];
-            if (activeFile.name.endsWith(".json")) {
-              try {
-                const parsed = JSON.parse(text);
-                const obj = Array.isArray(parsed) ? parsed[0] : parsed;
-                headers = Object.keys(obj);
-              } catch (_) {}
-            } else {
-              // CSV / Text fallback: parse comma-separated header row
-              const firstLine = text.split("\n")[0];
-              headers = firstLine
-                .split(",")
-                .map((h) => h.trim().replace(/^["']|["']$/g, ""));
+          let headers: string[] = [];
+          if (isExcel) {
+            const data = new Uint8Array(e.target?.result as ArrayBuffer);
+            const workbook = XLSX.read(data, { type: "array" });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+            if (rows && rows.length > 0) {
+              headers = rows[0].map(h => String(h || '').trim()).filter(h => h);
             }
-
-            if (headers.length > 0) {
-              inferredColumns = headers.map((h) => {
-                let colType = "string";
-                const lower = h.toLowerCase();
-                if (lower.includes("id")) colType = "uuid";
-                else if (lower.includes("date") || lower.includes("ts") || lower.includes("time")) colType = "timestamp";
-                else if (lower.includes("price") || lower.includes("amount") || lower.includes("salary") || lower.includes("revenue")) colType = "decimal(12,2)";
-                else if (lower.includes("status") || lower.includes("type") || lower.includes("role") || lower.includes("tier")) colType = "enum";
-                else if (lower.includes("is_") || lower.includes("has_") || lower.includes("active")) colType = "boolean";
-
-                return {
-                  name: h,
-                  type: colType,
-                  null: `${(Math.random() * 5).toFixed(1)}%`,
-                };
-              });
+          } else {
+            const text = e.target?.result as string;
+            if (text) {
+              if (activeFile.name.endsWith(".json")) {
+                try {
+                  const parsed = JSON.parse(text);
+                  const obj = Array.isArray(parsed) ? parsed[0] : parsed;
+                  headers = Object.keys(obj);
+                } catch (_) {}
+              } else {
+                // CSV / Text fallback: parse comma-separated header row
+                const firstLine = text.split("\n")[0];
+                headers = firstLine
+                  .split(",")
+                  .map((h) => h.trim().replace(/^["']|["']$/g, ""));
+              }
             }
+          }
+
+          if (headers.length > 0) {
+            inferredColumns = headers.map((h) => {
+              let colType = "string";
+              const lower = h.toLowerCase();
+              if (lower.includes("id")) colType = "uuid";
+              else if (lower.includes("date") || lower.includes("ts") || lower.includes("time")) colType = "timestamp";
+              else if (lower.includes("price") || lower.includes("amount") || lower.includes("salary") || lower.includes("revenue")) colType = "decimal(12,2)";
+              else if (lower.includes("status") || lower.includes("type") || lower.includes("role") || lower.includes("tier")) colType = "enum";
+              else if (lower.includes("is_") || lower.includes("has_") || lower.includes("active")) colType = "boolean";
+
+              return {
+                name: h,
+                type: colType,
+                null: `${(Math.random() * 5).toFixed(1)}%`,
+              };
+            });
           }
         } catch (err) {
           console.error("Failed to parse columns from uploaded file:", err);
         }
         proceed(inferredColumns);
       };
-      reader.readAsText(activeFile.slice(0, 10000));
+
+      if (isExcel) {
+        reader.readAsArrayBuffer(activeFile.slice(0, 1024 * 1024 * 5));
+      } else {
+        reader.readAsText(activeFile.slice(0, 10000));
+      }
     } else {
       proceed(inferredColumns);
     }
@@ -180,7 +204,7 @@ function DataSourcesPage() {
         type="file"
         ref={hiddenFileInputRef}
         className="hidden"
-        accept=".csv,.parquet,.json,.xlsx"
+        accept=".csv,.json,.xlsx,.xls"
         onChange={handleFileInputChange}
       />
 

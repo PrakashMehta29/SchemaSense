@@ -490,8 +490,8 @@ function Quality() {
             icon={Database}
             title="No dataset uploaded"
             description="Upload a dataset to generate AI-powered metadata and lineage."
-            actionLabel="Upload Dataset"
-            actionTo="/data-sources"
+            primaryActionLabel="Upload Dataset"
+            primaryActionTo="/data-sources"
           />
         </div>
       </div>
