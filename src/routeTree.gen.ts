@@ -10,12 +10,20 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UploadRouteImport } from './routes/upload'
-import { Route as ProfilerRouteImport } from './routes/profiler'
+import { Route as TalktoSpeechRouteImport } from './routes/talkto-speech'
+import { Route as SummaryRouteImport } from './routes/summary'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as QualityRouteImport } from './routes/quality'
+import { Route as MultilingualRouteImport } from './routes/multilingual'
 import { Route as LineageRouteImport } from './routes/lineage'
+import { Route as GovernanceRouteImport } from './routes/governance'
 import { Route as ExportRouteImport } from './routes/export'
+import { Route as ExecutiveRouteImport } from './routes/executive'
 import { Route as DictionaryRouteImport } from './routes/dictionary'
+import { Route as DatasetOverviewRouteImport } from './routes/dataset-overview'
+import { Route as DataSourcesRouteImport } from './routes/data-sources'
+import { Route as ChatRouteImport } from './routes/chat'
 import { Route as AskRouteImport } from './routes/ask'
-import { Route as AnomaliesRouteImport } from './routes/anomalies'
 import { Route as IndexRouteImport } from './routes/index'
 
 const UploadRoute = UploadRouteImport.update({
@@ -23,9 +31,29 @@ const UploadRoute = UploadRouteImport.update({
   path: '/upload',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProfilerRoute = ProfilerRouteImport.update({
-  id: '/profiler',
-  path: '/profiler',
+const TalktoSpeechRoute = TalktoSpeechRouteImport.update({
+  id: '/talkto-speech',
+  path: '/talkto-speech',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SummaryRoute = SummaryRouteImport.update({
+  id: '/summary',
+  path: '/summary',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QualityRoute = QualityRouteImport.update({
+  id: '/quality',
+  path: '/quality',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MultilingualRoute = MultilingualRouteImport.update({
+  id: '/multilingual',
+  path: '/multilingual',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LineageRoute = LineageRouteImport.update({
@@ -33,9 +61,19 @@ const LineageRoute = LineageRouteImport.update({
   path: '/lineage',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GovernanceRoute = GovernanceRouteImport.update({
+  id: '/governance',
+  path: '/governance',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ExportRoute = ExportRouteImport.update({
   id: '/export',
   path: '/export',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExecutiveRoute = ExecutiveRouteImport.update({
+  id: '/executive',
+  path: '/executive',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DictionaryRoute = DictionaryRouteImport.update({
@@ -43,14 +81,24 @@ const DictionaryRoute = DictionaryRouteImport.update({
   path: '/dictionary',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DatasetOverviewRoute = DatasetOverviewRouteImport.update({
+  id: '/dataset-overview',
+  path: '/dataset-overview',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DataSourcesRoute = DataSourcesRouteImport.update({
+  id: '/data-sources',
+  path: '/data-sources',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChatRoute = ChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AskRoute = AskRouteImport.update({
   id: '/ask',
   path: '/ask',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AnomaliesRoute = AnomaliesRouteImport.update({
-  id: '/anomalies',
-  path: '/anomalies',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -61,76 +109,132 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/anomalies': typeof AnomaliesRoute
   '/ask': typeof AskRoute
+  '/chat': typeof ChatRoute
+  '/data-sources': typeof DataSourcesRoute
+  '/dataset-overview': typeof DatasetOverviewRoute
   '/dictionary': typeof DictionaryRoute
+  '/executive': typeof ExecutiveRoute
   '/export': typeof ExportRoute
+  '/governance': typeof GovernanceRoute
   '/lineage': typeof LineageRoute
-  '/profiler': typeof ProfilerRoute
+  '/multilingual': typeof MultilingualRoute
+  '/quality': typeof QualityRoute
+  '/settings': typeof SettingsRoute
+  '/summary': typeof SummaryRoute
+  '/talkto-speech': typeof TalktoSpeechRoute
   '/upload': typeof UploadRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/anomalies': typeof AnomaliesRoute
   '/ask': typeof AskRoute
+  '/chat': typeof ChatRoute
+  '/data-sources': typeof DataSourcesRoute
+  '/dataset-overview': typeof DatasetOverviewRoute
   '/dictionary': typeof DictionaryRoute
+  '/executive': typeof ExecutiveRoute
   '/export': typeof ExportRoute
+  '/governance': typeof GovernanceRoute
   '/lineage': typeof LineageRoute
-  '/profiler': typeof ProfilerRoute
+  '/multilingual': typeof MultilingualRoute
+  '/quality': typeof QualityRoute
+  '/settings': typeof SettingsRoute
+  '/summary': typeof SummaryRoute
+  '/talkto-speech': typeof TalktoSpeechRoute
   '/upload': typeof UploadRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/anomalies': typeof AnomaliesRoute
   '/ask': typeof AskRoute
+  '/chat': typeof ChatRoute
+  '/data-sources': typeof DataSourcesRoute
+  '/dataset-overview': typeof DatasetOverviewRoute
   '/dictionary': typeof DictionaryRoute
+  '/executive': typeof ExecutiveRoute
   '/export': typeof ExportRoute
+  '/governance': typeof GovernanceRoute
   '/lineage': typeof LineageRoute
-  '/profiler': typeof ProfilerRoute
+  '/multilingual': typeof MultilingualRoute
+  '/quality': typeof QualityRoute
+  '/settings': typeof SettingsRoute
+  '/summary': typeof SummaryRoute
+  '/talkto-speech': typeof TalktoSpeechRoute
   '/upload': typeof UploadRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/anomalies'
     | '/ask'
+    | '/chat'
+    | '/data-sources'
+    | '/dataset-overview'
     | '/dictionary'
+    | '/executive'
     | '/export'
+    | '/governance'
     | '/lineage'
-    | '/profiler'
+    | '/multilingual'
+    | '/quality'
+    | '/settings'
+    | '/summary'
+    | '/talkto-speech'
     | '/upload'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/anomalies'
     | '/ask'
+    | '/chat'
+    | '/data-sources'
+    | '/dataset-overview'
     | '/dictionary'
+    | '/executive'
     | '/export'
+    | '/governance'
     | '/lineage'
-    | '/profiler'
+    | '/multilingual'
+    | '/quality'
+    | '/settings'
+    | '/summary'
+    | '/talkto-speech'
     | '/upload'
   id:
     | '__root__'
     | '/'
-    | '/anomalies'
     | '/ask'
+    | '/chat'
+    | '/data-sources'
+    | '/dataset-overview'
     | '/dictionary'
+    | '/executive'
     | '/export'
+    | '/governance'
     | '/lineage'
-    | '/profiler'
+    | '/multilingual'
+    | '/quality'
+    | '/settings'
+    | '/summary'
+    | '/talkto-speech'
     | '/upload'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AnomaliesRoute: typeof AnomaliesRoute
   AskRoute: typeof AskRoute
+  ChatRoute: typeof ChatRoute
+  DataSourcesRoute: typeof DataSourcesRoute
+  DatasetOverviewRoute: typeof DatasetOverviewRoute
   DictionaryRoute: typeof DictionaryRoute
+  ExecutiveRoute: typeof ExecutiveRoute
   ExportRoute: typeof ExportRoute
+  GovernanceRoute: typeof GovernanceRoute
   LineageRoute: typeof LineageRoute
-  ProfilerRoute: typeof ProfilerRoute
+  MultilingualRoute: typeof MultilingualRoute
+  QualityRoute: typeof QualityRoute
+  SettingsRoute: typeof SettingsRoute
+  SummaryRoute: typeof SummaryRoute
+  TalktoSpeechRoute: typeof TalktoSpeechRoute
   UploadRoute: typeof UploadRoute
 }
 
@@ -143,11 +247,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UploadRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/profiler': {
-      id: '/profiler'
-      path: '/profiler'
-      fullPath: '/profiler'
-      preLoaderRoute: typeof ProfilerRouteImport
+    '/talkto-speech': {
+      id: '/talkto-speech'
+      path: '/talkto-speech'
+      fullPath: '/talkto-speech'
+      preLoaderRoute: typeof TalktoSpeechRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/summary': {
+      id: '/summary'
+      path: '/summary'
+      fullPath: '/summary'
+      preLoaderRoute: typeof SummaryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/quality': {
+      id: '/quality'
+      path: '/quality'
+      fullPath: '/quality'
+      preLoaderRoute: typeof QualityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/multilingual': {
+      id: '/multilingual'
+      path: '/multilingual'
+      fullPath: '/multilingual'
+      preLoaderRoute: typeof MultilingualRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lineage': {
@@ -157,11 +289,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LineageRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/governance': {
+      id: '/governance'
+      path: '/governance'
+      fullPath: '/governance'
+      preLoaderRoute: typeof GovernanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/export': {
       id: '/export'
       path: '/export'
       fullPath: '/export'
       preLoaderRoute: typeof ExportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/executive': {
+      id: '/executive'
+      path: '/executive'
+      fullPath: '/executive'
+      preLoaderRoute: typeof ExecutiveRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dictionary': {
@@ -171,18 +317,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DictionaryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dataset-overview': {
+      id: '/dataset-overview'
+      path: '/dataset-overview'
+      fullPath: '/dataset-overview'
+      preLoaderRoute: typeof DatasetOverviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/data-sources': {
+      id: '/data-sources'
+      path: '/data-sources'
+      fullPath: '/data-sources'
+      preLoaderRoute: typeof DataSourcesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chat': {
+      id: '/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof ChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ask': {
       id: '/ask'
       path: '/ask'
       fullPath: '/ask'
       preLoaderRoute: typeof AskRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/anomalies': {
-      id: '/anomalies'
-      path: '/anomalies'
-      fullPath: '/anomalies'
-      preLoaderRoute: typeof AnomaliesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -197,12 +357,20 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AnomaliesRoute: AnomaliesRoute,
   AskRoute: AskRoute,
+  ChatRoute: ChatRoute,
+  DataSourcesRoute: DataSourcesRoute,
+  DatasetOverviewRoute: DatasetOverviewRoute,
   DictionaryRoute: DictionaryRoute,
+  ExecutiveRoute: ExecutiveRoute,
   ExportRoute: ExportRoute,
+  GovernanceRoute: GovernanceRoute,
   LineageRoute: LineageRoute,
-  ProfilerRoute: ProfilerRoute,
+  MultilingualRoute: MultilingualRoute,
+  QualityRoute: QualityRoute,
+  SettingsRoute: SettingsRoute,
+  SummaryRoute: SummaryRoute,
+  TalktoSpeechRoute: TalktoSpeechRoute,
   UploadRoute: UploadRoute,
 }
 export const routeTree = rootRouteImport

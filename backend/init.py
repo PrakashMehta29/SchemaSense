@@ -1,0 +1,1 @@
+# SchemaSense backend init script
