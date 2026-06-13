@@ -10,6 +10,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { GlassCard } from "@/components/ui-bits";
+import { determineResponseKey } from "@/lib/chatService";
+import { MOCK_RESPONSES } from "@/lib/mockResponses";
 
 type VoiceState = "idle" | "recording" | "paused" | "sent";
 
@@ -307,8 +309,16 @@ export function VoiceInputCard() {
     // Removing setTimeout here is critical so that speakText is called synchronously
     // in the same event loop as the user's click. This prevents strict browser 
     // autoplay policies (like Safari) from blocking the audio!
+    let responseText = "";
     const selectedOption = LANGUAGE_OPTIONS.find(opt => opt.code === selectedLang) || LANGUAGE_OPTIONS[0];
-    const responseText = selectedOption.text;
+
+    if (selectedLang === "en-US") {
+      const responseKey = determineResponseKey(transcript);
+      responseText = MOCK_RESPONSES[responseKey]?.answer || MOCK_RESPONSES.default.answer;
+    } else {
+      responseText = selectedOption.text;
+    }
+
     setAiResponse(responseText);
     speakText(responseText, selectedOption.code);
 
