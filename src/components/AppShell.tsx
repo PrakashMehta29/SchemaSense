@@ -32,17 +32,7 @@ export function AppShell() {
     setDemoActive(isDemoModeActive());
   }, []);
 
-  const { hasDataset, metadataGenerated } = useWorkspace();
-
-  // Dynamic system activity messages
-  let systemActivity = "System Idle — Awaiting Ingestion";
-  if (hasDataset) {
-    if (metadataGenerated) {
-      systemActivity = "AI Metadata Indexed";
-    } else {
-      systemActivity = "Awaiting AI Profile Audit";
-    }
-  }
+  const { hasDataset } = useWorkspace();
 
   return (
     <div className="flex w-screen h-screen overflow-hidden bg-transparent text-foreground">
@@ -112,23 +102,6 @@ export function AppShell() {
               <span className="font-medium">Settings</span>
             </div>
           </Link>
-
-          <div className="rounded-xl border glass-panel-heavy p-4">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-              </span>
-              Engine online
-            </div>
-            <div className="mt-1.5 font-mono-tight text-[11px] text-muted-foreground/80 flex flex-col gap-1">
-              <div>v0.42 · region us-east</div>
-              <div className="border-t border-border/20 pt-1.5 mt-0.5 text-[9px] text-muted-foreground/60 flex flex-col gap-0.5">
-                <span className="uppercase tracking-widest text-[8px] font-mono-tight text-muted-foreground/50">Status:</span>
-                <span className="text-primary truncate">{systemActivity}</span>
-              </div>
-            </div>
-          </div>
         </div>
       </aside>
 
